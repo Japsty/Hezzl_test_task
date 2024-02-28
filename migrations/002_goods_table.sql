@@ -10,4 +10,6 @@ CREATE TABLE IF NOT EXISTS goods
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL,
     PRIMARY KEY (id, project_id)
 );
+
 -- +goose Down
+DROP TABLE IF EXISTS goods;

@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS projects
 );
 
 INSERT INTO projects(id, name)
-VALUES (1,'Запись 1')
+VALUES (1,'Запись 1');
 
 -- +goose Down
+DROP TABLE IF EXISTS projects;

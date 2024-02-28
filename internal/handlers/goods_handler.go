@@ -9,14 +9,23 @@ import (
 	"strconv"
 )
 
+//type Repository interface {
+//	CreateGood(ctx context.Context, projectId int, name string) (entities.Good, error)
+//	UpdateGood(ctx context.Context, goodId int, projectId int, name string, description string) (entities.Good, error)
+//	RemoveGood(goodId, projectId int) (entities.RemoveResponse, error)
+//	ListGoods(limit, offset int) (entities.GoodsList, error)
+//	ReprioritiizeGood(goodId, projectId, newPriority int) (entities.ReprioritiizeResponse, error)
+//}
+
 type GoodsHandler struct {
 	GoodsRepository storage.Repository
 }
 
 func (gh *GoodsHandler) AddGood(c *gin.Context) {
 	var AddGoodRequest entities.AddGoodRequest
+
 	if err := c.BindJSON(&AddGoodRequest); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error: ": err})
 		slog.Error("AddGood BindJSON Error: ", err)
 		return
 	}
@@ -35,4 +44,36 @@ func (gh *GoodsHandler) AddGood(c *gin.Context) {
 	}
 	slog.Info("Good added successfully")
 	c.JSON(http.StatusCreated, good)
+}
+
+func (gh *GoodsHandler) PatchGood(c *gin.Context) {
+	var UpdateGoodRequest entities.UpdateGoodRequest
+
+	if err := c.BindJSON(&UpdateGoodRequest); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error: ": err})
+		slog.Error("AddGood BindJSON Error: ", err)
+		return
+	}
+	id, err := strconv.Atoi(c.Query("id"))
+	if err != nil || id < 0 {
+		slog.Error("Invalid 'id' parameter")
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid 'id' parameter"})
+		return
+	}
+	projectId, err := strconv.Atoi(c.Query("projectId"))
+	if err != nil || projectId < 0 {
+		slog.Error("Invalid 'projectId' parameter")
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid 'projectId' parameter"})
+		return
+	}
+
+	good, err := gh.GoodsRepository.UpdateGood(c.Request.Context(), id, projectId, UpdateGoodRequest.Name, UpdateGoodRequest.Description)
+	if err != nil {
+		c.AbortWithError(http.StatusInternalServerError, err).SetType(gin.ErrorTypePrivate)
+		slog.Error("PatchGood UpdateGood Error: ", err)
+		return
+	}
+	slog.Info("Good updated successfully")
+	c.JSON(http.StatusCreated, good)
+
 }

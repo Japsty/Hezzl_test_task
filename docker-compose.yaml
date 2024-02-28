@@ -1,0 +1,32 @@
+version: '3'
+
+services:
+  pq_database:
+    image: postgres
+    restart: always
+    environment:
+      POSTGRES_DB: Hezzl
+      POSTGRES_USER: Hezzl
+      POSTGRES_PASSWORD: hezzl
+    ports:
+      - "5432:5432"
+    networks:
+      - service_network
+
+  service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      - pq_database
+    networks:
+      - service_network
+    ports:
+      - "8080:8080"
+    environment:
+      PORT: '8080'
+      MIGRATE_DB: true
+
+networks:
+  service_network:
+    driver: bridge

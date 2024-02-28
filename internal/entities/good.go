@@ -15,3 +15,8 @@ type Good struct {
 type AddGoodRequest struct {
 	Name string `json:"name"`
 }
+
+type UpdateGoodRequest struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+}

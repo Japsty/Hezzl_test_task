@@ -1,0 +1,14 @@
+.idea
+**/.DS_Store
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+vendor
+
+*.test
+
+*.out
+
+go.work
