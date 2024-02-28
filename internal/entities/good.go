@@ -1,6 +1,8 @@
 package entities
 
-import "time"
+import (
+	"time"
+)
 
 type Good struct {
 	ID          int       `json:"id,omitempty"`
@@ -19,4 +21,10 @@ type AddGoodRequest struct {
 type UpdateGoodRequest struct {
 	Name        string `json:"name"`
 	Description string `json:"description"`
+}
+
+type RemoveGoodResponse struct {
+	ID         int  `json:"id"`
+	CampaignID int  `json:"campaignId"`
+	Removed    bool `json:"removed"`
 }

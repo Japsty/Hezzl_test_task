@@ -69,11 +69,34 @@ func (gh *GoodsHandler) PatchGood(c *gin.Context) {
 
 	good, err := gh.GoodsRepository.UpdateGood(c.Request.Context(), id, projectId, UpdateGoodRequest.Name, UpdateGoodRequest.Description)
 	if err != nil {
-		c.AbortWithError(http.StatusInternalServerError, err).SetType(gin.ErrorTypePrivate)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err})
 		slog.Error("PatchGood UpdateGood Error: ", err)
 		return
 	}
 	slog.Info("Good updated successfully")
-	c.JSON(http.StatusCreated, good)
+	c.JSON(http.StatusOK, good)
+}
 
+func (gh *GoodsHandler) DeleteGood(c *gin.Context) {
+	id, err := strconv.Atoi(c.Query("id"))
+	if err != nil || id < 0 {
+		slog.Error("Invalid 'id' parameter")
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid 'id' parameter"})
+		return
+	}
+	projectId, err := strconv.Atoi(c.Query("projectId"))
+	if err != nil || projectId < 0 {
+		slog.Error("Invalid 'projectId' parameter")
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid 'projectId' parameter"})
+		return
+	}
+
+	response, err := gh.GoodsRepository.RemoveGood(c.Request.Context(), id, projectId)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err})
+		slog.Error("DeleteGood RemoveGood Error: ", err)
+		return
+	}
+	slog.Info("Good removed successfully")
+	c.JSON(http.StatusOK, response)
 }

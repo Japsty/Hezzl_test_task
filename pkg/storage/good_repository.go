@@ -12,9 +12,9 @@ import (
 type Repository interface {
 	CreateGood(ctx context.Context, projectId int, name string) (entities.Good, error)
 	UpdateGood(ctx context.Context, goodId int, projectId int, name string, description string) (entities.Good, error)
-	RemoveGood(goodId, projectId int) (entities.RemoveResponse, error)
-	ListGoods(limit, offset int) (entities.GoodsList, error)
-	ReprioritiizeGood(goodId, projectId, newPriority int) (entities.ReprioritiizeResponse, error)
+	RemoveGood(ctx context.Context, goodId, projectId int) (entities.RemoveGoodResponse, error)
+	ListGoods(ctx context.Context, limit, offset int) (entities.GoodsList, error)
+	ReprioritiizeGood(ctx context.Context, goodId, projectId, newPriority int) (entities.ReprioritiizeResponse, error)
 }
 
 type goodRepository struct {
@@ -82,17 +82,44 @@ func (g *goodRepository) UpdateGood(ctx context.Context, goodId int, projectId i
 	return good, nil
 }
 
-func (g *goodRepository) RemoveGood(goodId, projectId int) (entities.RemoveResponse, error) {
+func (g *goodRepository) RemoveGood(ctx context.Context, goodId, projectId int) (entities.RemoveGoodResponse, error) {
+	var exists bool
+	err := g.db.QueryRow(ctx, CheckRecord, goodId, projectId).Scan(&exists)
+	if err != nil {
+		log.Printf("RemoveGood QueryRow CheckRecord Error: %v", err)
+		return entities.RemoveGoodResponse{}, err
+	}
+	if exists == false {
+		log.Printf("Record doesn't exists")
+		err = errors.New("record doesn't exists")
+		return entities.RemoveGoodResponse{}, err
+	}
+
+	var good entities.Good
+	err = g.db.QueryRow(ctx, RemoveQuery,
+		goodId,
+		projectId,
+	).Scan(
+		&good.ID, &good.ProjectID, &good.Name, &good.Description, &good.Priority, &good.Removed, &good.CreatedAt,
+	)
+	if err != nil {
+		log.Printf("RemoveGood QueryRow Error: %v", err)
+		return entities.RemoveGoodResponse{}, err
+	}
+	var removeGood entities.RemoveGoodResponse
+	removeGood.ID = good.ID
+	removeGood.CampaignID = good.ProjectID
+	removeGood.Removed = good.Removed
+
+	return removeGood, nil
+}
+
+func (g goodRepository) ListGoods(ctx context.Context, limit, offset int) (entities.GoodsList, error) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (g goodRepository) ListGoods(limit, offset int) (entities.GoodsList, error) {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (g *goodRepository) ReprioritiizeGood(goodId, projectId, newPriority int) (entities.ReprioritiizeResponse, error) {
+func (g *goodRepository) ReprioritiizeGood(ctx context.Context, goodId, projectId, newPriority int) (entities.ReprioritiizeResponse, error) {
 	//TODO implement me
 	panic("implement me")
 }
