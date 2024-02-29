@@ -93,7 +93,7 @@ func (gh *GoodsHandler) DeleteGood(c *gin.Context) {
 
 	response, err := gh.GoodsRepository.RemoveGood(c.Request.Context(), id, projectId)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err})
+		c.JSON(http.StatusNotFound, gin.H{"error": err})
 		slog.Error("DeleteGood RemoveGood Error: ", err)
 		return
 	}

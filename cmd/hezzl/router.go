@@ -16,9 +16,9 @@ func SetupRouter(repo storage.Repository) *gin.Engine {
 	}
 
 	router.POST("/good/create", gh.AddGood)
-	router.PATCH("/good/update")
-	router.DELETE("/good/remove")
-	router.GET("/goods/list")
+	router.PATCH("/good/update", gh.PatchGood)
+	router.DELETE("/good/remove", gh.DeleteGood)
+	router.GET("/goods/list", gh.GetGoods)
 	router.PATCH("/good/reprioritiize")
 
 	return router

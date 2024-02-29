@@ -33,7 +33,8 @@ const (
 	RemoveQuery = `
 		UPDATE goods
 		SET removed = true
-		WHERE id = $1 AND project_id = $2;
+		WHERE id = $1 AND project_id = $2
+		RETURNING id, project_id, removed;
 	`
 	// --------------------------
 

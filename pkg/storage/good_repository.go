@@ -4,6 +4,7 @@ import (
 	"Hezzl_test_task/internal/entities"
 	"context"
 	"errors"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"log"
 	"log/slog"
@@ -67,6 +68,15 @@ func (g *goodRepository) UpdateGood(ctx context.Context, goodId int, projectId i
 		return entities.Good{}, err
 	}
 
+	txOptions := pgx.TxOptions{}
+	tx, err := g.db.BeginTx(ctx, txOptions)
+	log.Printf("UpdateGood Transaction Begined")
+	if err != nil {
+		log.Printf("UpdateGood BeginTx Error: %v", err)
+		return entities.Good{}, err
+	}
+	defer tx.Rollback(ctx)
+
 	var good entities.Good
 	err = g.db.QueryRow(ctx, UpdateQuery,
 		goodId,
@@ -80,6 +90,12 @@ func (g *goodRepository) UpdateGood(ctx context.Context, goodId int, projectId i
 		log.Printf("UpdateGood QueryRow Error: %v", err)
 		return entities.Good{}, err
 	}
+
+	if err = tx.Commit(ctx); err != nil {
+		log.Printf("UpdateGood Commit Error: %v", err)
+		return entities.Good{}, err
+	}
+
 	return good, nil
 }
 
@@ -90,9 +106,17 @@ func (g *goodRepository) RemoveGood(ctx context.Context, goodId, projectId int) 
 		log.Printf("RemoveGood QueryRow CheckRecord Error: %v", err)
 		return entities.RemoveGoodResponse{}, err
 	}
-	if exists == false {
+	if !exists {
 		log.Printf("Record doesn't exists")
-		err = errors.New("record doesn't exists")
+		err = errors.New("errors.good.notFound")
+		return entities.RemoveGoodResponse{}, err
+	}
+
+	txOptions := pgx.TxOptions{}
+	tx, err := g.db.BeginTx(ctx, txOptions)
+	log.Printf("RemoveGood Transaction Begined")
+	if err != nil {
+		log.Printf("RemoveGood BeginTx Error: %v", err)
 		return entities.RemoveGoodResponse{}, err
 	}
 
@@ -101,12 +125,18 @@ func (g *goodRepository) RemoveGood(ctx context.Context, goodId, projectId int) 
 		goodId,
 		projectId,
 	).Scan(
-		&good.ID, &good.ProjectID, &good.Name, &good.Description, &good.Priority, &good.Removed, &good.CreatedAt,
+		&good.ID, &good.ProjectID, &good.Removed,
 	)
 	if err != nil {
 		log.Printf("RemoveGood QueryRow Error: %v", err)
 		return entities.RemoveGoodResponse{}, err
 	}
+
+	if err = tx.Commit(ctx); err != nil {
+		log.Printf("RemoveGood Commit Error: %v", err)
+		return entities.RemoveGoodResponse{}, err
+	}
+
 	var removeGood entities.RemoveGoodResponse
 	removeGood.ID = good.ID
 	removeGood.CampaignID = good.ProjectID
