@@ -1,6 +1,14 @@
-package storage
+package querries
 
 const (
+	CheckRecord = `
+		SELECT EXISTS (
+			SELECT 1
+			FROM goods
+			WHERE id = $1 AND project_id = $2
+		);
+	`
+
 	// CreateGoodQuerries -----
 	SelectMaxPriority = `
 		SELECT COALESCE(MAX(priority), 0) 
@@ -20,13 +28,6 @@ const (
 		WHERE id = $1 AND project_id = $2
 		RETURNING id, project_id, name, description, priority, removed, created_at;
 	`
-	CheckRecord = `
-		SELECT EXISTS (
-			SELECT 1
-			FROM goods
-			WHERE id = $1 AND project_id = $2
-		);
-	`
 	// --------------------------
 
 	// RemoveGoodsQuerries -----
@@ -43,6 +44,29 @@ const (
 		SELECT id, project_id, name, description, priority, removed, created_at
 		FROM goods
 		LIMIT $1 OFFSET $2
+    `
+
+	CountTotalQuery = `
+		SELECT COUNT(id) FROM goods;
+    `
+	CountTotalRemovedQuery = `
+		SELECT COUNT(id) FROM goods WHERE removed = TRUE;
+
+    `
+	// --------------------------
+
+	// ReprioritiizeQuerries ------
+	UpdatePriority = `
+		UPDATE goods
+		SET priority = $3
+		WHERE id = $1 AND project_id = $2
+    `
+
+	RepriotiizeQuery = `
+		UPDATE goods
+		SET priority = priority + 1
+		WHERE project_id = $2 AND priority < $3;
+		RETURNING id, priority;
     `
 	// --------------------------
 )

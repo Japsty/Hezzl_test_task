@@ -14,29 +14,29 @@ type Good struct {
 	CreatedAt   time.Time `json:"createdAt,omitempty"`
 }
 
-type AddGoodRequest struct {
-	Name string `json:"name"`
-}
-
-type UpdateGoodRequest struct {
-	Name        string `json:"name"`
-	Description string `json:"description"`
-}
-
-type RemoveGoodResponse struct {
-	ID         int  `json:"id"`
-	CampaignID int  `json:"campaignId"`
-	Removed    bool `json:"removed"`
-}
-
-type Meta struct {
-	Total   int `json:"total"`
-	Removed int `json:"removed"`
-	Limit   int `json:"limit"`
-	Offset  int `json:"offset"`
-}
-
-type ListGoodsResponse struct {
-	Meta  Meta   `json:"meta"`
-	Goods []Good `json:"goods"`
-}
+//type AddGoodRequest struct {
+//	Name string `json:"name"`
+//}
+//
+//type UpdateGoodRequest struct {
+//	Name        string `json:"name"`
+//	Description string `json:"description"`
+//}
+//
+//type RemoveGoodResponse struct {
+//	ID         int  `json:"id"`
+//	CampaignID int  `json:"campaignId"`
+//	Removed    bool `json:"removed"`
+//}
+//
+//type Meta struct {
+//	Total   int `json:"total"`
+//	Removed int `json:"removed"`
+//	Limit   int `json:"limit"`
+//	Offset  int `json:"offset"`
+//}
+//
+//type ListGoodsResponse struct {
+//	Meta  Meta   `json:"meta"`
+//	Goods []Good `json:"goods"`
+//}

@@ -11,7 +11,9 @@ CREATE TABLE IF NOT EXISTS goods
     PRIMARY KEY (id, project_id)
 );
 
-CREATE INDEX id_and_project_id_index ON goods (id, project_id);
+CREATE INDEX id_and_project_id_index ON goods USING btree (id, project_id);
+CREATE INDEX name_index ON goods USING hash (name);
+
 
 -- +goose Down
 DROP TABLE IF EXISTS goods;

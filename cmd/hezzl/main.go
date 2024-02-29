@@ -1,16 +1,13 @@
 package main
 
 import (
-	"Hezzl_test_task/migrations"
-	"Hezzl_test_task/pkg/storage"
+	"Hezzl_test_task/internal/handlers"
+	"Hezzl_test_task/internal/storage/repos"
 	"Hezzl_test_task/pkg/storage/dbconn"
+	"Hezzl_test_task/pkg/storage/migrate"
 	"context"
-	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/jackc/pgx/v5/stdlib"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
-	"github.com/pressly/goose/v3"
-	"github.com/pressly/goose/v3/database"
 	"log"
 	"log/slog"
 )
@@ -22,45 +19,21 @@ func main() {
 	}
 	slog.Default()
 
-	var db *pgxpool.Pool
-	// Коннектимся к бд
-	for i := 0; i < 3; i++ {
-		db, err = dbconn.NewPostgresConnection()
-		if err != nil {
-			log.Println("Main NewPostgresConnection Error: ", err)
-		} else if err == nil {
-			log.Println("Бд подключена, пингую бд")
-			break
-		}
+	db, err := dbconn.NewPostgresConnection()
+	if err != nil {
+		log.Fatal("Main NewPostgresConnection Error")
 	}
+	slog.Info("Бд подключена")
 	defer db.Close()
-	//db, err := dbconn.NewPostgresConnection()
-	//if err != nil {
-	//	log.Fatal("Main NewPostgresConnection Error")
-	//}
-	//slog.Info("Бд подключена")
 
-	err = db.Ping(context.Background())
-	if err != nil {
-		log.Fatal("Main PingDb Error")
-	}
-	slog.Info("Пинг бд успешен")
+	repo := repos.New(db)
 
-	repo := storage.New(db)
-	// делаем миграцию
-
-	sqlDb := stdlib.OpenDBFromPool(db)
-	provider, err := goose.NewProvider(database.DialectPostgres, sqlDb, migrations.Embed)
-	if err != nil {
-		log.Fatal("Main failed to create NewProvider for migration")
-	}
-	_, err = provider.Up(context.Background())
+	err = migrate.UpMigration(context.Background(), db)
 	if err != nil {
 		log.Fatal("Failed to up migration: ", err)
-		return
 	}
 
-	router := SetupRouter(repo)
+	router := handlers.NewGoodsHandler(repo)
 
 	// err = router.Run("localhost:8080") - если на локальной машине
 	slog.Info("Starting client on port 8080")

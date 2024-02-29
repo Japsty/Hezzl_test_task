@@ -1,28 +1,54 @@
 package handlers
 
 import (
-	"Hezzl_test_task/internal/entities"
-	"Hezzl_test_task/pkg/storage"
+	"Hezzl_test_task/internal/storage/repos"
+	"Hezzl_test_task/pkg/logger"
 	"github.com/gin-gonic/gin"
 	"log/slog"
 	"net/http"
 	"strconv"
 )
 
-//type Repository interface {
-//	CreateGood(ctx context.Context, projectId int, name string) (entities.Good, error)
-//	UpdateGood(ctx context.Context, goodId int, projectId int, name string, description string) (entities.Good, error)
-//	RemoveGood(goodId, projectId int) (entities.RemoveResponse, error)
-//	ListGoods(limit, offset int) (entities.GoodsList, error)
-//	ReprioritiizeGood(goodId, projectId, newPriority int) (entities.ReprioritiizeResponse, error)
-//}
-
 type GoodsHandler struct {
-	GoodsRepository storage.Repository
+	GoodsRepository repos.Repository
 }
 
+func NewGoodsHandler(repo repos.Repository) *gin.Engine {
+
+	router := gin.Default()
+	router.Use(logger.LogMiddleware())
+
+	gh := GoodsHandler{
+		GoodsRepository: repo,
+	}
+
+	router.POST("/good/create", gh.AddGood)
+	router.PATCH("/good/update", gh.PatchGoodUpdate)
+	router.DELETE("/good/remove", gh.DeleteGood)
+	router.GET("/goods/list", gh.GetGoods)
+	router.PATCH("/good/reprioritiize", gh.PatchGoodReprioritiize)
+
+	return router
+}
+
+//func (gh *GoodsHandler) checkURLParams(c *gin.Context) (int, int, error) {
+//	limit, err := strconv.Atoi(c.Query("limit"))
+//	if err != nil {
+//		log.Println("Invalid 'limit' parameter")
+//		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid 'limit' parameter"})
+//		return 0, 0, err
+//	}
+//	offset, err := strconv.Atoi(c.Query("offset"))
+//	if err != nil {
+//		log.Println("Invalid 'offset' parameter")
+//		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid 'offset' parameter"})
+//		return 0, 0, err
+//	}
+//	return limit, offset, nil
+//}
+
 func (gh *GoodsHandler) AddGood(c *gin.Context) {
-	var AddGoodRequest entities.AddGoodRequest
+	var AddGoodRequest AddGoodRequest
 
 	if err := c.BindJSON(&AddGoodRequest); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error: ": err})
@@ -46,8 +72,8 @@ func (gh *GoodsHandler) AddGood(c *gin.Context) {
 	c.JSON(http.StatusCreated, good)
 }
 
-func (gh *GoodsHandler) PatchGood(c *gin.Context) {
-	var UpdateGoodRequest entities.UpdateGoodRequest
+func (gh *GoodsHandler) PatchGoodUpdate(c *gin.Context) {
+	var UpdateGoodRequest UpdateGoodRequest
 
 	if err := c.BindJSON(&UpdateGoodRequest); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error: ": err})
@@ -70,7 +96,7 @@ func (gh *GoodsHandler) PatchGood(c *gin.Context) {
 	good, err := gh.GoodsRepository.UpdateGood(c.Request.Context(), id, projectId, UpdateGoodRequest.Name, UpdateGoodRequest.Description)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err})
-		slog.Error("PatchGood UpdateGood Error: ", err)
+		slog.Error("PatchGoodUpdate UpdateGood Error: ", err)
 		return
 	}
 	slog.Info("Good updated successfully")
@@ -122,5 +148,35 @@ func (gh *GoodsHandler) GetGoods(c *gin.Context) {
 		return
 	}
 	slog.Info("Goods listed successfully")
+	c.JSON(http.StatusOK, response)
+}
+
+func (gh *GoodsHandler) PatchGoodReprioritiize(c *gin.Context) {
+	id, err := strconv.Atoi(c.Query("id"))
+	if err != nil || id < 0 {
+		slog.Error("Invalid 'id' parameter")
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid 'id' parameter"})
+		return
+	}
+	projectId, err := strconv.Atoi(c.Query("projectId"))
+	if err != nil || projectId < 0 {
+		slog.Error("Invalid 'projectId' parameter")
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid 'projectId' parameter"})
+		return
+	}
+	var ReprioritiizeRequest PatchGoodReprioritiizeRequest
+
+	if err := c.BindJSON(&ReprioritiizeRequest); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error: ": err})
+		slog.Error("PatchGoodReprioritiize BindJSON Error: ", err)
+		return
+	}
+
+	response, err := gh.GoodsRepository.ReprioritiizeGood(c.Request.Context(), id, projectId, ReprioritiizeRequest.NewPriority)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": err})
+		slog.Error("PatchGoodReprioritiize ReprioritiizeGood Error: ", err)
+		return
+	}
 	c.JSON(http.StatusOK, response)
 }

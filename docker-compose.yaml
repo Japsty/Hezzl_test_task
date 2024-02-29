@@ -8,6 +8,11 @@ services:
       POSTGRES_DB: Hezzl
       POSTGRES_USER: Hezzl
       POSTGRES_PASSWORD: hezzl
+#    healthcheck:
+#      test: /usr/bin/pg_isready
+#      interval: 5s
+#      timeout: 10s
+#      retries: 3
     ports:
       - "5432:5432"
     networks:
