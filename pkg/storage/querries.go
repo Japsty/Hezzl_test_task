@@ -35,4 +35,13 @@ const (
 		SET removed = true
 		WHERE id = $1 AND project_id = $2;
 	`
+	// --------------------------
+
+	// ListGoodsQuerries ------
+	ListQuery = `
+		SELECT id, project_id, name, description, priority, removed, created_at
+		FROM goods
+		LIMIT $1 OFFSET $2
+    `
+	// --------------------------
 )

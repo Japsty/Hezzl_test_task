@@ -6,6 +6,7 @@ import (
 	"errors"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"log"
+	"log/slog"
 	"time"
 )
 
@@ -13,8 +14,8 @@ type Repository interface {
 	CreateGood(ctx context.Context, projectId int, name string) (entities.Good, error)
 	UpdateGood(ctx context.Context, goodId int, projectId int, name string, description string) (entities.Good, error)
 	RemoveGood(ctx context.Context, goodId, projectId int) (entities.RemoveGoodResponse, error)
-	ListGoods(ctx context.Context, limit, offset int) (entities.GoodsList, error)
-	ReprioritiizeGood(ctx context.Context, goodId, projectId, newPriority int) (entities.ReprioritiizeResponse, error)
+	ListGoods(ctx context.Context, limit, offset int) (entities.ListGoodsResponse, error)
+	ReprioritiizeGood(ctx context.Context, goodId, projectId, newPriority int) error
 }
 
 type goodRepository struct {
@@ -114,12 +115,53 @@ func (g *goodRepository) RemoveGood(ctx context.Context, goodId, projectId int) 
 	return removeGood, nil
 }
 
-func (g goodRepository) ListGoods(ctx context.Context, limit, offset int) (entities.GoodsList, error) {
-	//TODO implement me
-	panic("implement me")
+func (g *goodRepository) ListGoods(ctx context.Context, limit, offset int) (entities.ListGoodsResponse, error) {
+	rows, err := g.db.Query(ctx, ListQuery, limit, offset)
+	if err != nil {
+		log.Println("ListGoods Query Error", err)
+		return entities.ListGoodsResponse{}, err
+	}
+
+	var goodsResponse entities.ListGoodsResponse
+	var goods []entities.Good
+
+	totlaRows := 0
+	removedRows := 0
+
+	for rows.Next() {
+		var good entities.Good
+		if err := rows.Scan(
+			&good.ID,
+			&good.ProjectID,
+			&good.Name,
+			&good.Description,
+			&good.Priority,
+			&good.Removed,
+			&good.CreatedAt,
+		); err != nil {
+			log.Println("ListGoods Scan Error:", err)
+			return entities.ListGoodsResponse{}, err
+		}
+		if good.Removed == true {
+			removedRows++
+		}
+		totlaRows++
+		goods = append(goods, good)
+	}
+
+	goodsResponse.Goods = goods
+	goodsResponse.Meta = entities.Meta{
+		Total:   totlaRows,
+		Removed: removedRows,
+		Limit:   limit,
+		Offset:  offset,
+	}
+
+	slog.Debug("ListGoods found goods")
+	return goodsResponse, nil
 }
 
-func (g *goodRepository) ReprioritiizeGood(ctx context.Context, goodId, projectId, newPriority int) (entities.ReprioritiizeResponse, error) {
+func (g *goodRepository) ReprioritiizeGood(ctx context.Context, goodId, projectId, newPriority int) error {
 	//TODO implement me
 	panic("implement me")
 }

@@ -100,3 +100,27 @@ func (gh *GoodsHandler) DeleteGood(c *gin.Context) {
 	slog.Info("Good removed successfully")
 	c.JSON(http.StatusOK, response)
 }
+
+func (gh *GoodsHandler) GetGoods(c *gin.Context) {
+	limit, err := strconv.Atoi(c.Query("limit"))
+	if err != nil || limit <= 0 {
+		slog.Error("Invalid 'limit' parameter")
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid 'limit' parameter"})
+		return
+	}
+	offset, err := strconv.Atoi(c.Query("offset"))
+	if err != nil || offset < 0 {
+		slog.Error("Invalid 'offset' parameter")
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid 'offset' parameter"})
+		return
+	}
+
+	response, err := gh.GoodsRepository.ListGoods(c.Request.Context(), limit, offset)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err})
+		slog.Error("GetGoods ListGoods Error: ", err)
+		return
+	}
+	slog.Info("Goods listed successfully")
+	c.JSON(http.StatusOK, response)
+}
