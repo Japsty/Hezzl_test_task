@@ -2,14 +2,15 @@ package main
 
 import (
 	"Hezzl_test_task/internal/handlers"
+	"Hezzl_test_task/internal/natsclient"
 	"Hezzl_test_task/internal/storage/repos"
-	"Hezzl_test_task/pkg/storage/dbconn"
+	"Hezzl_test_task/pkg/storage/connect"
 	"Hezzl_test_task/pkg/storage/migrate"
-	"Hezzl_test_task/pkg/storage/redisconn"
 	"context"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 	"log"
+	"os"
 )
 
 func main() {
@@ -18,26 +19,52 @@ func main() {
 		log.Fatal("Error loading .env file: ", err)
 	}
 
-	db, err := dbconn.NewPostgresConnection()
+	//Коннектимся ко всем базам
+	db, err := connect.NewPostgresConnection()
 	if err != nil {
 		log.Fatal("Main NewPostgresConnection Error: ", err)
 	}
 	defer db.Close()
 	repo := repos.New(db)
 
-	redis, err := redisconn.NewRedisConnection()
+	redis, err := connect.NewRedisConnection()
 	if err != nil {
 		log.Fatal("Main NewRedisConnection Error: ", err)
 	}
 	defer redis.Close()
 	redis_repo := repos.NewRedisRepository(redis)
 
+	clickhouse, err := connect.NewClickhouseConnection()
+	if err != nil {
+		log.Fatal("Main NewClickhouseConnection Error: ", err)
+	}
+	defer clickhouse.Close()
+	click_repo := repos.NewClickhouseRepository(clickhouse)
+
+	//Коннектимся к НАТСу
+	natsConn, err := natsclient.ConnectToNATS()
+	if err != nil {
+		log.Fatal("Main NewNATSClient Error:", err)
+	}
+	defer natsConn.Close()
+	natsClient := natsclient.NewNATSClient(natsConn)
+
+	//Поднимаем миграции
 	err = migrate.UpMigration(context.Background(), db)
 	if err != nil {
 		log.Fatal("Failed to up migration: ", err)
 	}
 
-	router := handlers.NewGoodsHandler(repo, redis_repo)
+	err = migrate.UpClickhouse(context.Background(), clickhouse)
+
+	subj := os.Getenv("NATS_SUBJECT")
+	err = repos.ClickhouseRepository.Subscribe(click_repo, subj)
+	if err != nil {
+		log.Fatal("Main ClickhouseRepository Subscribe Error: ", err)
+		return
+	}
+
+	router := handlers.NewGoodsHandler(repo, redis_repo, natsClient)
 
 	// err = router.Run("localhost:8080") - если на локальной машине
 	log.Println("Starting client on port 8080")

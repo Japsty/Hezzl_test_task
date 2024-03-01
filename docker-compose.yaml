@@ -8,21 +8,35 @@ services:
       POSTGRES_DB: Hezzl
       POSTGRES_USER: Hezzl
       POSTGRES_PASSWORD: hezzl
-#    healthcheck:
-#      test: /usr/bin/pg_isready
-#      interval: 5s
-#      timeout: 10s
-#      retries: 3
     ports:
       - "5432:5432"
     networks:
       - service_network
 
   redis:
-    image: "redis:alpine"
+    image: redis:alpine
     restart: always
     ports:
       - "6379:6379"
+    networks:
+      - service_network
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:latest
+    restart: always
+    ports:
+      - "18123:8123"
+      - "19000:9000"
+    networks:
+      - service_network
+
+  nats:
+    image: nats:latest
+    restart: always
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+      - "6222:6222"
     networks:
       - service_network
 
@@ -32,13 +46,14 @@ services:
       dockerfile: Dockerfile
     depends_on:
       - pq_database
+      - clickhouse
+      - nats
     networks:
       - service_network
     ports:
       - "8080:8080"
     environment:
       PORT: '8080'
-      MIGRATE_DB: true
 
 networks:
   service_network:

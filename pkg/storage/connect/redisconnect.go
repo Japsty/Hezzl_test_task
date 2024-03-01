@@ -1,4 +1,4 @@
-package redisconn
+package connect
 
 import (
 	"context"

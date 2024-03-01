@@ -1,12 +1,14 @@
 package handlers
 
 import (
+	"Hezzl_test_task/internal/natsclient"
 	"Hezzl_test_task/internal/storage/repos"
 	"Hezzl_test_task/pkg/logger"
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 )
 
@@ -15,14 +17,19 @@ type goodsHandler struct {
 	redisRepository repos.RedisRepository
 	requestParams   requestParams
 	validator       *validator.Validate
+	natsConn        *natsclient.NATSClient
 }
 
+// Я понимаю, что данное решение совсем плохое, но я не смог понять каким образом
+// мне реализовать инвалидацию не имея доступа к полям лимит и оффсет при этом не
+// совершая сохранение построчно, что накладно т.к. у нас будет огромное количество запросов
+// в реляционную бд
 type requestParams struct {
 	Limit  int
 	Offset int
 }
 
-func NewGoodsHandler(repo repos.Repository, redis repos.RedisRepository) *gin.Engine {
+func NewGoodsHandler(repo repos.Repository, redis repos.RedisRepository, natsConn *natsclient.NATSClient) *gin.Engine {
 
 	router := gin.Default()
 	router.Use(logger.LogMiddleware())
@@ -31,6 +38,7 @@ func NewGoodsHandler(repo repos.Repository, redis repos.RedisRepository) *gin.En
 		goodsRepository: repo,
 		redisRepository: redis,
 		validator:       validator.New(),
+		natsConn:        natsConn,
 	}
 
 	router.POST("/good/create", gh.AddGood)
@@ -58,7 +66,7 @@ func (gh *goodsHandler) AddGood(c *gin.Context) {
 	}
 
 	projectId, err := strconv.Atoi(c.Query("projectId"))
-	if err != nil || projectId < 0 {
+	if err != nil || projectId <= 0 {
 		log.Println("Invalid 'projectId' parameter: ", projectId)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid 'projectId' parameter"})
 		return
@@ -66,11 +74,18 @@ func (gh *goodsHandler) AddGood(c *gin.Context) {
 
 	good, err := gh.goodsRepository.CreateGood(c.Request.Context(), projectId, AddGoodRequest.Name)
 	if err != nil {
-		c.AbortWithError(http.StatusInternalServerError, err).SetType(gin.ErrorTypePrivate)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Server database error"})
 		log.Println("AddGood CreateGood Error: ", err)
 		return
 	}
 	log.Println("Good added successfully")
+
+	err = gh.natsConn.PublishMessage(os.Getenv("nats_subject"), good)
+	if err != nil {
+		log.Println("AddGood NATS PublishMessage Error: ", err)
+		return
+	}
+
 	c.JSON(http.StatusCreated, good)
 }
 
@@ -85,20 +100,20 @@ func (gh *goodsHandler) PatchGoodUpdate(c *gin.Context) {
 		log.Println("AddGood BindJSON Error: ", err)
 		return
 	}
+
 	var ids idsRequest
 	if err := c.ShouldBindQuery(&ids); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error: ": err})
+		c.JSON(http.StatusBadRequest, "Query error")
 		log.Println("PatchGoodUpdate ShouldBindQuery Error: ", err)
 		return
 	}
 
-	if err := gh.validator.Struct(patchGoodRequest); err == nil {
-		if err = gh.validator.Struct(ids); err != nil {
-			c.JSON(http.StatusBadRequest, "Invalid ids error")
-			log.Println("PatchGoodUpdate Validation Error: ", err)
-			return
-		}
-	} else {
+	if err := gh.validator.Struct(ids); err != nil {
+		c.JSON(http.StatusBadRequest, "Invalid ids error")
+		log.Println("PatchGoodUpdate Validation Error: ", err)
+		return
+	}
+	if err := gh.validator.Struct(patchGoodRequest); err != nil {
 		c.JSON(http.StatusBadRequest, "Invalid request body error:")
 		log.Println("PatchGoodUpdate Validation Error: ", err)
 		return
@@ -109,7 +124,7 @@ func (gh *goodsHandler) PatchGoodUpdate(c *gin.Context) {
 
 	existing, err := gh.goodsRepository.ExistionCheck(c, id, projectId)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err})
+		c.JSON(http.StatusNotFound, "Existion error")
 		log.Println("PatchGoodUpdate ExistionCheck Error: ", err)
 		return
 	}
@@ -137,6 +152,13 @@ func (gh *goodsHandler) PatchGoodUpdate(c *gin.Context) {
 	log.Println("PatchGoodUpdate CacheInvalidation Error")
 
 	log.Println("Good updated successfully")
+
+	err = gh.natsConn.PublishMessage(os.Getenv("nats_subject"), good)
+	if err != nil {
+		log.Println("PatchGoodUpdate NATS PublishMessage Error: ", err)
+		return
+	}
+
 	c.JSON(http.StatusOK, good)
 }
 
@@ -187,6 +209,13 @@ func (gh *goodsHandler) DeleteGood(c *gin.Context) {
 	log.Println("DeleteGood CacheInvalidation Error")
 
 	log.Println("Good removed successfully")
+
+	err = gh.natsConn.PublishMessage(os.Getenv("nats_subject"), response)
+	if err != nil {
+		log.Println("DeleteGood NATS PublishMessage Error: ", err)
+		return
+	}
+
 	c.JSON(http.StatusOK, response)
 }
 
@@ -224,6 +253,15 @@ func (gh *goodsHandler) GetGoods(c *gin.Context) {
 		}
 	}
 	log.Println("Goods listed successfully")
+
+	for _, good := range response.Goods {
+		err = gh.natsConn.PublishMessage(os.Getenv("nats_subject"), good)
+		if err != nil {
+			log.Println("GetGoods NATS PublishMessage Error: ", err)
+			return
+		}
+	}
+
 	c.JSON(http.StatusOK, response)
 }
 

@@ -6,7 +6,6 @@ import (
 	"Hezzl_test_task/internal/storage"
 	"Hezzl_test_task/internal/storage/querries"
 	"context"
-	"errors"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"log"
@@ -40,10 +39,9 @@ func (g *goodRepository) ExistionCheck(ctx context.Context, goodId, projectId in
 		log.Printf("UpdateGood QueryRow CheckRecord Error: %v", err)
 		return false, err
 	}
-	if exists == false {
+	if !exists {
 		log.Printf("Record doesn't exists")
-		err = errors.New("record doesn't exists")
-		return false, err
+		return exists, nil
 	}
 	return exists, nil
 }
@@ -83,12 +81,6 @@ func (g *goodRepository) CreateGood(ctx context.Context, projectId int, name str
 // возвращает обновленную запись в виде entities.Good
 func (g *goodRepository) UpdateGood(ctx context.Context, goodId int, projectId int, name string, description string) (entities.Good, error) {
 
-	//err := g.existionCheck(ctx, goodId, projectId)
-	//if err != nil {
-	//	log.Printf("UpdateGood existionCheck Error: %v", err)
-	//	return entities.Good{}, err
-	//}
-
 	txOptions := pgx.TxOptions{
 		IsoLevel: pgx.Serializable,
 	}
@@ -96,7 +88,12 @@ func (g *goodRepository) UpdateGood(ctx context.Context, goodId int, projectId i
 	log.Printf("UpdateGood Transaction Begined")
 	if err != nil {
 		log.Printf("UpdateGood BeginTx Error: %v", err)
-		defer tx.Rollback(ctx)
+		defer func() {
+			errRollback := tx.Rollback(ctx)
+			if errRollback != nil {
+				log.Printf("UpdateGood Rollback Transaction Error: %v in BeginTx Error: %v", errRollback, err)
+			}
+		}()
 		return entities.Good{}, err
 	}
 
@@ -124,12 +121,6 @@ func (g *goodRepository) UpdateGood(ctx context.Context, goodId int, projectId i
 
 func (g *goodRepository) RemoveGood(ctx context.Context, goodId, projectId int) (storage.RemoveGoodResponse, error) {
 
-	//err := g.existionCheck(ctx, goodId, projectId)
-	//if err != nil {
-	//	log.Printf("RemoveGood existionCheck Error: %v", err)
-	//	return storage.RemoveGoodResponse{}, err
-	//}
-
 	txOptions := pgx.TxOptions{
 		IsoLevel: pgx.Serializable,
 	}
@@ -137,7 +128,12 @@ func (g *goodRepository) RemoveGood(ctx context.Context, goodId, projectId int) 
 	log.Printf("RemoveGood Transaction Begined")
 	if err != nil {
 		log.Printf("RemoveGood BeginTx Error: %v", err)
-		defer tx.Rollback(ctx)
+		defer func() {
+			errRollback := tx.Rollback(ctx)
+			if errRollback != nil {
+				log.Printf("RemoveGood Rollback Transaction Error: %v in BeginTx Error: %v", errRollback, err)
+			}
+		}()
 		return storage.RemoveGoodResponse{}, err
 	}
 
@@ -218,13 +214,22 @@ func (g *goodRepository) ListGoods(ctx context.Context, limit, offset int) (stor
 
 func (g *goodRepository) ReprioritiizeGood(ctx context.Context, goodId, projectId, newPriority int) (storage.ReprioritiizeResponse, error) {
 
-	//err := g.existionCheck(ctx, goodId, projectId)
-	//if err != nil {
-	//	log.Printf("ReprioritiizeGood existionCheck Error: %v", err)
-	//	return storage.ReprioritiizeResponse{}, err
-	//}
-
-	_, err := g.db.Exec(ctx, querries.UpdatePriority,
+	txOptions := pgx.TxOptions{
+		IsoLevel: pgx.Serializable,
+	}
+	tx, err := g.db.BeginTx(ctx, txOptions)
+	log.Printf("ReprioritiizeGood Transaction Begined")
+	if err != nil {
+		log.Printf("ReprioritiizeGood BeginTx Error: %v", err)
+		defer func() {
+			errRollback := tx.Rollback(ctx)
+			if errRollback != nil {
+				log.Printf("ReprioritiizeGood Rollback Transaction Error: %v in BeginTx Error: %v", errRollback, err)
+			}
+		}()
+		return storage.ReprioritiizeResponse{}, err
+	}
+	_, err = g.db.Exec(ctx, querries.UpdatePriority,
 		goodId,
 		projectId,
 		newPriority,
@@ -262,6 +267,11 @@ func (g *goodRepository) ReprioritiizeGood(ctx context.Context, goodId, projectI
 	}
 
 	reprioritiizeResoinse.Priorities = priorities
+
+	if err = tx.Commit(ctx); err != nil {
+		log.Printf("UpdateGood Commit Error: %v", err)
+		return storage.ReprioritiizeResponse{}, err
+	}
 
 	return reprioritiizeResoinse, nil
 }

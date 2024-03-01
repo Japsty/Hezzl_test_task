@@ -28,3 +28,13 @@ type PriorityObj struct {
 type ReprioritiizeResponse struct {
 	Priorities []PriorityObj `json:"priorities"`
 }
+
+type ClickhouseLog struct {
+	ID          int    `db:"id"`
+	ProjectID   int    `db:"project_id"`
+	Name        string `db:"name"`
+	Description string `db:"description"`
+	Priority    int    `db:"priority"`
+	Removed     bool   `db:"removed"`
+	CreatedAt   string `db:"created_at"`
+}

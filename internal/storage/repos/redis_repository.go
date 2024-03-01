@@ -49,10 +49,6 @@ func (r *redisRepository) CacheTheGoods(ctx context.Context, goodsList storage.L
 		log.Println("CacheTheGoods JSON Marshal Error: ", err)
 		return err
 	}
-	var ids []int
-	for _, val := range goodsList.Goods {
-		ids = append(ids, val.ID)
-	}
 
 	cacheKey := fmt.Sprintf("list_goods_%d_%d", limit, offset)
 	if err = r.client.Set(ctx, cacheKey, data, time.Minute).Err(); err != nil {

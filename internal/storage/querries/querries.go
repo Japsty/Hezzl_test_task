@@ -75,4 +75,10 @@ const (
 		FROM goods;
     `
 	// --------------------------
+
+	InsetIntoClickhouse = ` 
+		INSERT INTO clickhouse 
+		(id, project_id, name, description, priority, removed, created_at) 
+		VALUES (?, ?, ?, ?, ?, ?, ?)
+		`
 )
