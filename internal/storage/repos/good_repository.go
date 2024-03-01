@@ -1,3 +1,4 @@
+// Package repos provides postgre repository implementations and redis repository.
 package repos
 
 import (
@@ -13,7 +14,9 @@ import (
 	"time"
 )
 
+// Repository - основной интерфейс, содержит все доступные методы для работы с PostgreSql базой данных
 type Repository interface {
+	ExistionCheck(ctx context.Context, goodId, projectId int) (bool, error)
 	CreateGood(ctx context.Context, projectId int, name string) (entities.Good, error)
 	UpdateGood(ctx context.Context, goodId int, projectId int, name string, description string) (entities.Good, error)
 	RemoveGood(ctx context.Context, goodId, projectId int) (storage.RemoveGoodResponse, error)
@@ -29,21 +32,24 @@ func New(db *pgxpool.Pool) Repository {
 	return &goodRepository{db: db}
 }
 
-func (g *goodRepository) existionCheck(ctx context.Context, goodId, projectId int) error {
+// existionCheck - проверка наличия записи в базе данных по переданным goodId, projectId
+func (g *goodRepository) ExistionCheck(ctx context.Context, goodId, projectId int) (bool, error) {
 	var exists bool
 	err := g.db.QueryRow(ctx, querries.CheckRecord, goodId, projectId).Scan(&exists)
 	if err != nil {
 		log.Printf("UpdateGood QueryRow CheckRecord Error: %v", err)
-		return err
+		return false, err
 	}
 	if exists == false {
 		log.Printf("Record doesn't exists")
 		err = errors.New("record doesn't exists")
-		return err
+		return false, err
 	}
-	return nil
+	return exists, nil
 }
 
+// CreateGood - метод создания записи в базе данных с переданными projectId и name,
+// возвращает созданную запись в виде entities.Good
 func (g *goodRepository) CreateGood(ctx context.Context, projectId int, name string) (entities.Good, error) {
 	var maxPriority int
 	err := g.db.QueryRow(ctx, querries.SelectMaxPriority).Scan(&maxPriority)
@@ -72,15 +78,20 @@ func (g *goodRepository) CreateGood(ctx context.Context, projectId int, name str
 	return good, nil
 }
 
+// UpdateGood - метод обновления записи в базе данных с переданными goodId, projectId, name, description,
+// вызывает внутри себя existionCheck,
+// возвращает обновленную запись в виде entities.Good
 func (g *goodRepository) UpdateGood(ctx context.Context, goodId int, projectId int, name string, description string) (entities.Good, error) {
 
-	err := g.existionCheck(ctx, goodId, projectId)
-	if err != nil {
-		log.Printf("UpdateGood existionCheck Error: %v", err)
-		return entities.Good{}, err
-	}
+	//err := g.existionCheck(ctx, goodId, projectId)
+	//if err != nil {
+	//	log.Printf("UpdateGood existionCheck Error: %v", err)
+	//	return entities.Good{}, err
+	//}
 
-	txOptions := pgx.TxOptions{}
+	txOptions := pgx.TxOptions{
+		IsoLevel: pgx.Serializable,
+	}
 	tx, err := g.db.BeginTx(ctx, txOptions)
 	log.Printf("UpdateGood Transaction Begined")
 	if err != nil {
@@ -113,13 +124,15 @@ func (g *goodRepository) UpdateGood(ctx context.Context, goodId int, projectId i
 
 func (g *goodRepository) RemoveGood(ctx context.Context, goodId, projectId int) (storage.RemoveGoodResponse, error) {
 
-	err := g.existionCheck(ctx, goodId, projectId)
-	if err != nil {
-		log.Printf("RemoveGood existionCheck Error: %v", err)
-		return storage.RemoveGoodResponse{}, err
-	}
+	//err := g.existionCheck(ctx, goodId, projectId)
+	//if err != nil {
+	//	log.Printf("RemoveGood existionCheck Error: %v", err)
+	//	return storage.RemoveGoodResponse{}, err
+	//}
 
-	txOptions := pgx.TxOptions{}
+	txOptions := pgx.TxOptions{
+		IsoLevel: pgx.Serializable,
+	}
 	tx, err := g.db.BeginTx(ctx, txOptions)
 	log.Printf("RemoveGood Transaction Begined")
 	if err != nil {
@@ -191,11 +204,7 @@ func (g *goodRepository) ListGoods(ctx context.Context, limit, offset int) (stor
 		log.Println("ListGoods CountTotalRemovedQuery QueryRow Error", err)
 	}
 
-	if totalRows == 0 {
-		goodsResponse.Goods = []entities.Good{}
-	} else {
-		goodsResponse.Goods = goods
-	}
+	goodsResponse.Goods = goods
 	goodsResponse.Meta = storage.Meta{
 		Total:   totalRows,
 		Removed: removedRows,
@@ -209,21 +218,31 @@ func (g *goodRepository) ListGoods(ctx context.Context, limit, offset int) (stor
 
 func (g *goodRepository) ReprioritiizeGood(ctx context.Context, goodId, projectId, newPriority int) (storage.ReprioritiizeResponse, error) {
 
-	err := g.existionCheck(ctx, goodId, projectId)
-	if err != nil {
-		log.Printf("ReprioritiizeGood existionCheck Error: %v", err)
-		return storage.ReprioritiizeResponse{}, err
-	}
+	//err := g.existionCheck(ctx, goodId, projectId)
+	//if err != nil {
+	//	log.Printf("ReprioritiizeGood existionCheck Error: %v", err)
+	//	return storage.ReprioritiizeResponse{}, err
+	//}
 
-	_, err = g.db.Exec(ctx, querries.UpdatePriority,
+	_, err := g.db.Exec(ctx, querries.UpdatePriority,
 		goodId,
 		projectId,
 		newPriority,
 	)
-
-	rows, err := g.db.Query(ctx, querries.RepriotiizeQuery, goodId, projectId, newPriority)
 	if err != nil {
-		log.Println("ReprioritiizeGood Query Error", err)
+		log.Println("ReprioritiizeGood UpdatePriority Exec Error", err)
+		return storage.ReprioritiizeResponse{}, err
+	}
+
+	_, err = g.db.Exec(ctx, querries.RepriotiizeQuery, projectId, newPriority)
+	if err != nil {
+		log.Println("ReprioritiizeGood RepriotiizeQuery Exec Error", err)
+		return storage.ReprioritiizeResponse{}, err
+	}
+
+	rows, err := g.db.Query(ctx, querries.RepriotiizeSelectQuery)
+	if err != nil {
+		log.Println("ReprioritiizeGood RepriotiizeSelectQuery Query Error", err)
 		return storage.ReprioritiizeResponse{}, err
 	}
 

@@ -41,10 +41,11 @@ const (
 
 	// ListGoodsQuerries ------
 	ListQuery = `
-		SELECT id, project_id, name, description, priority, removed, created_at
-		FROM goods
-		LIMIT $1 OFFSET $2
-    `
+			SELECT id, project_id, name, description, priority, removed, created_at
+			FROM goods
+			ORDER BY created_at
+			LIMIT $1 OFFSET $2;
+		`
 
 	CountTotalQuery = `
 		SELECT COUNT(id) FROM goods;
@@ -65,8 +66,13 @@ const (
 	RepriotiizeQuery = `
 		UPDATE goods
 		SET priority = priority + 1
-		WHERE project_id = $2 AND priority < $3;
+		WHERE project_id = $1 AND priority < $2
 		RETURNING id, priority;
+    `
+
+	RepriotiizeSelectQuery = `
+		SELECT id, priority
+		FROM goods;
     `
 	// --------------------------
 )
