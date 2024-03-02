@@ -77,6 +77,8 @@ func main() {
 	//
 	router := handlers.NewGoodsHandler(repo, redis_repo, natsClient)
 
+	//router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+
 	// err = router.Run("localhost:8080") - если на локальной машине
 	log.Println("Starting client on port 8080")
 	err = router.Run(":8080")

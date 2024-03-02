@@ -53,40 +53,44 @@ func NewGoodsHandler(repo repos.Repository, redis repos.RedisRepository, natsCon
 	return router
 }
 
-// @Summary Add a new good
-// @Description Add a new good to the system
-// @Tags goods
-// @Accept json
-// @Produce json
-// @Param projectId query int true "Project ID"
-// @Param request body addGoodRequest true "Good details"
-// @Success 201 {object} YourGoodStruct
-// @Router /good/create [post]
+// AddGood example
+//
+//	@Summary Add a new good
+//	@Description Add a new good to the database
+//	@Tags good
+//	@Accept json
+//	@Produce json
+//	@Param projectId query int true "Project ID"
+//	@Param request body addGoodRequest true "Good details"
+//	@Success 		201 	{string}	string "ok"
+//	@Failure		400		{string}	string "bad input"
+//	@Failure		500		{string}	string "Internal Server Error"
+//	@Router /good/create [post]
 func (gh *goodsHandler) AddGood(c *gin.Context) {
 	var AddGoodRequest addGoodRequest
 
 	if err := c.BindJSON(&AddGoodRequest); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "bad input"})
 		log.Println("AddGood BindJSON Error: ", err)
 		return
 	}
 
 	if err := gh.validator.Struct(AddGoodRequest); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"Invalid Name error:": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "bad input"})
 		log.Println("AddGood Validation Error: ", err)
 		return
 	}
 
-	projectId, err := strconv.Atoi(c.Query("projectId"))
+	projectId, err := strconv.Atoi(c.Query(""))
 	if err != nil || projectId <= 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "bad input"})
 		log.Println("Invalid 'projectId' parameter: ", projectId)
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid 'projectId' parameter"})
 		return
 	}
 
 	good, err := gh.goodsRepository.CreateGood(c.Request.Context(), projectId, AddGoodRequest.Name, AddGoodRequest.Description)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Server database error"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": http.StatusText(http.StatusInternalServerError)})
 		log.Println("AddGood CreateGood Error: ", err)
 		return
 	}
@@ -95,21 +99,26 @@ func (gh *goodsHandler) AddGood(c *gin.Context) {
 	c.JSON(http.StatusCreated, good)
 }
 
-// @Summary Update an existing good
-// @Description Update details of an existing good
-// @Tags goods
-// @Accept json
-// @Produce json
-// @Param id path int true "Good ID"
-// @Param projectId path int true "Project ID"
-// @Param request body updateGoodRequest true "Updated good details"
-// @Success 200 {object} YourGoodStruct
-// @Router /good/update [patch]
+// PatchGoodUpdate example
+//
+//	@Summary Update an existing good
+//	@Description Update details of an existing good
+//	@Tags good
+//	@Accept json
+//	@Produce json
+//	@Param id path int true "ID"
+//	@Param projectId path int true "ProjectID"
+//	@Param request body updateGoodRequest true "Updated good details"
+//	@Success 		200 	{string} 	string "ok"
+//	@Failure		400		{string}	string "bad input"
+//	@Failure		404		{string}	string "not found"
+//	@Failure		500		{string}	string "Internal Server Error"
+//	@Router /good/update [patch]
 func (gh *goodsHandler) PatchGoodUpdate(c *gin.Context) {
 	var patchGoodRequest updateGoodRequest
 
 	if err := c.BindJSON(&patchGoodRequest); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error: ": err})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "bad input"})
 		log.Println("AddGood BindJSON Error: ", err)
 		return
 	}
@@ -119,18 +128,18 @@ func (gh *goodsHandler) PatchGoodUpdate(c *gin.Context) {
 
 	var ids idsRequest
 	if err := c.ShouldBindQuery(&ids); err != nil {
-		c.JSON(http.StatusBadRequest, "Query error")
+		c.JSON(http.StatusBadRequest, gin.H{"error": "bad input"})
 		log.Println("PatchGoodUpdate ShouldBindQuery Error: ", err)
 		return
 	}
 
 	if err := gh.validator.Struct(ids); err != nil {
-		c.JSON(http.StatusBadRequest, "Invalid ids error")
+		c.JSON(http.StatusBadRequest, gin.H{"error": "bad input"})
 		log.Println("PatchGoodUpdate Validation Error: ", err)
 		return
 	}
 	if err := gh.validator.Struct(patchGoodRequest); err != nil {
-		c.JSON(http.StatusBadRequest, "Invalid request body error:")
+		c.JSON(http.StatusBadRequest, gin.H{"error": "bad input"})
 		log.Println("PatchGoodUpdate Validation Error: ", err)
 		return
 	}
@@ -140,7 +149,7 @@ func (gh *goodsHandler) PatchGoodUpdate(c *gin.Context) {
 
 	existing, err := gh.goodsRepository.ExistionCheck(c, id, projectId)
 	if err != nil {
-		c.JSON(http.StatusNotFound, "Existion error")
+		c.JSON(http.StatusInternalServerError, gin.H{"error": http.StatusText(http.StatusInternalServerError)})
 		log.Println("PatchGoodUpdate ExistionCheck Error: ", err)
 		return
 	}
@@ -156,7 +165,7 @@ func (gh *goodsHandler) PatchGoodUpdate(c *gin.Context) {
 
 	good, err := gh.goodsRepository.UpdateGood(c.Request.Context(), id, projectId, name, description)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": http.StatusText(http.StatusInternalServerError)})
 		log.Println("PatchGoodUpdate UpdateGood Error: ", err)
 		return
 	}
@@ -180,25 +189,30 @@ func (gh *goodsHandler) PatchGoodUpdate(c *gin.Context) {
 	}
 }
 
-// @Summary Delete a good
-// @Description Delete a good by ID
-// @Tags goods
-// @Accept json
-// @Produce json
-// @Param id path int true "Good ID"
-// @Param projectId path int true "Project ID"
-// @Success 200 {object} YourGoodStruct
-// @Router /good/remove [delete]
+// DeleteGood example
+//
+//	@Summary Delete a good
+//	@Description Delete a good by ID
+//	@Tags good
+//	@Accept json
+//	@Produce json
+//	@Param id path int true "Good ID"
+//	@Param projectId path int true "Project ID"
+//	@Success 		200 	{string} 	string "ok"
+//	@Failure		400		{string}	string "bad input"
+//	@Failure		404		{string}	string "not found"
+//	@Failure		500		{string}	string "Internal Server Error"
+//	@Router /good/remove [delete]
 func (gh *goodsHandler) DeleteGood(c *gin.Context) {
 	var ids idsRequest
 	if err := c.ShouldBindQuery(&ids); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error: ": err})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "bad input"})
 		log.Println("DeleteGood ShouldBindQuery Error: ", err)
 		return
 	}
 
 	if err := gh.validator.Struct(ids); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"Invalid ids error:": err})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "bad input"})
 		log.Println("DeleteGood Validation Error: ", err)
 		return
 	}
@@ -208,7 +222,7 @@ func (gh *goodsHandler) DeleteGood(c *gin.Context) {
 
 	existing, err := gh.goodsRepository.ExistionCheck(c, ids.Id, ids.ProjectId)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": http.StatusText(http.StatusInternalServerError)})
 		log.Println("DeleteGood ExistionCheck Error: ", err)
 		return
 	}
@@ -224,7 +238,7 @@ func (gh *goodsHandler) DeleteGood(c *gin.Context) {
 
 	response, err := gh.goodsRepository.RemoveGood(c.Request.Context(), id, projectId)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": http.StatusText(http.StatusInternalServerError)})
 		log.Println("DeleteGood RemoveGood Error: ", err)
 		return
 	}
@@ -250,24 +264,28 @@ func (gh *goodsHandler) DeleteGood(c *gin.Context) {
 	}
 }
 
-// @Summary Get list of goods
-// @Description Get list of goods with optional parameters
-// @Tags goods
-// @Accept json
-// @Produce json
-// @Param limit query int false "Limit"
-// @Param offset query int false "Offset"
-// @Success 200 {array} YourGoodStruct
-// @Router /goods/list [get]
+// GetGoods
+//
+//	@Summary Get list of goods
+//	@Description Get list of goods with pagination parameters
+//	@Tags good
+//	@Accept json
+//	@Produce json
+//	@Param limit query int false "Limit"
+//	@Param offset query int false "Offset"
+//	@Success 		200 	{string} 	string "ok"
+//	@Failure		400		{string}	string "bad input"
+//	@Failure		500		{string}	string "Internal Server Error"
+//	@Router /goods/list [get]
 func (gh *goodsHandler) GetGoods(c *gin.Context) {
 	var goodsRequestParams goodsRequest
 	if err := c.ShouldBindQuery(&goodsRequestParams); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error: ": err})
+		c.JSON(http.StatusBadRequest, gin.H{"error: ": "bad input"})
 		log.Println("GetGoods ShouldBindQuery Error: ", err)
 		return
 	}
 	if err := gh.validator.Struct(goodsRequestParams); err != nil {
-		c.JSON(http.StatusBadRequest, "Invalid parameters")
+		c.JSON(http.StatusBadRequest, gin.H{"error: ": "bad input"})
 		log.Println("GetGoods Validation Error: ", err)
 		return
 	}
@@ -283,7 +301,7 @@ func (gh *goodsHandler) GetGoods(c *gin.Context) {
 		log.Printf("GetGoods GetFromCache Error: %v Trying to Get from DB", err)
 		response, err = gh.goodsRepository.ListGoods(c.Request.Context(), limit, offset)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": http.StatusText(http.StatusInternalServerError)})
 			log.Println("GetGoods ListGoods Error: ", err)
 			return
 		}
@@ -297,33 +315,38 @@ func (gh *goodsHandler) GetGoods(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
-// @Summary Reprioritize a good
-// @Description Change the priority of a good
-// @Tags goods
-// @Accept json
-// @Produce json
-// @Param id path int true "Good ID"
-// @Param projectId path int true "Project ID"
-// @Param request body patchGoodReprioritiizeRequest true "New priority details"
-// @Success 200 {object} YourGoodStruct
-// @Router /good/reprioritiize [patch]
+// PatchGoodReprioritiize
+//
+//	@Summary Reprioritize a good
+//	@Description Change the priority of a good
+//	@Tags goods
+//	@Accept json
+//	@Produce json
+//	@Param id path int true "Good ID"
+//	@Param projectId path int true "Project ID"
+//	@Param request body patchGoodReprioritiizeRequest true "New priority details"
+//	@Success 		200 	{string} 	string "ok"
+//	@Failure		400		{string}	string "bad input"
+//	@Failure		404		{string}	string "not found"
+//	@Failure		500		{string}	string "Internal Server Error"
+//	@Router /good/reprioritiize [patch]
 func (gh *goodsHandler) PatchGoodReprioritiize(c *gin.Context) {
 	var ids idsRequest
 	if err := c.ShouldBindQuery(&ids); err != nil {
-		c.JSON(http.StatusBadRequest, "Query error")
+		c.JSON(http.StatusBadRequest, gin.H{"error": "bad input"})
 		log.Println("PatchGoodReprioritiize ShouldBindQuery Error: ", err)
 		return
 	}
 
 	if err := gh.validator.Struct(ids); err != nil {
-		c.JSON(http.StatusBadRequest, "Invalid ids error")
+		c.JSON(http.StatusBadRequest, gin.H{"error": "bad input"})
 		log.Println("PatchGoodReprioritiize Validation Error: ", err)
 		return
 	}
 
 	existing, err := gh.goodsRepository.ExistionCheck(c, ids.Id, ids.ProjectId)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": http.StatusText(http.StatusInternalServerError)})
 		log.Println("PatchGoodReprioritiize ExistionCheck Error: ", err)
 		return
 	}
@@ -340,7 +363,7 @@ func (gh *goodsHandler) PatchGoodReprioritiize(c *gin.Context) {
 	var ReprioritiizeRequest patchGoodReprioritiizeRequest
 
 	if err := c.BindJSON(&ReprioritiizeRequest); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error: ": err})
+		c.JSON(http.StatusBadRequest, gin.H{"error: ": "bad input"})
 		log.Println("PatchGoodReprioritiize BindJSON Error: ", err)
 		return
 	}
@@ -349,7 +372,7 @@ func (gh *goodsHandler) PatchGoodReprioritiize(c *gin.Context) {
 
 	response, err := gh.goodsRepository.ReprioritiizeGood(c.Request.Context(), id, projectId, ReprioritiizeRequest.NewPriority)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": http.StatusText(http.StatusInternalServerError)})
 		log.Println("PatchGoodReprioritiize ReprioritiizeGood Error: ", err)
 		return
 	}

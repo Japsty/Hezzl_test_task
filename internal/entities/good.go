@@ -5,6 +5,7 @@ import (
 )
 
 // Good - основная структура, содержит все те же поля, что и в таблице Goods
+// @Good
 type Good struct {
 	ID          int       `json:"id,omitempty"`
 	ProjectID   int       `json:"projectId" validate:"required,numeric,min=0"`

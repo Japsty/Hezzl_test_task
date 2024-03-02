@@ -9,7 +9,7 @@ type addGoodRequest struct {
 // updateGoodRequest - форматированный запрос к методу PatchGoodUpdate
 type updateGoodRequest struct {
 	Name        string `json:"name" validate:"required,min=3,max=255"`
-	Description string `json:"description" validate:"omitempty"`
+	Description string `json:"description" validate:"omitempty,min=3,max=255"`
 }
 
 // idsRequest - форматированный запрос с id для удобной валидации
