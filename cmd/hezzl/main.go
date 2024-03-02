@@ -13,13 +13,21 @@ import (
 	"os"
 )
 
+//	@title			REST API Service
+//	@version		1.0
+//	@description	HEZZL backend trainee assignment 2024
+
+// @contact.name	Danil Vinogradov
+// @contact.url		http://t.me/japsty
+// @contact.email	danil-vinogradov-92@mail.ru
 func main() {
+	//Подгружаем переменные окружения
 	err := godotenv.Load()
 	if err != nil {
 		log.Fatal("Error loading .env file: ", err)
 	}
 
-	//Коннектимся ко всем базам
+	//Коннектимся к постгре
 	db, err := connect.NewPostgresConnection()
 	if err != nil {
 		log.Fatal("Main NewPostgresConnection Error: ", err)
@@ -27,6 +35,7 @@ func main() {
 	defer db.Close()
 	repo := repos.New(db)
 
+	//Коннектимся к редис
 	redis, err := connect.NewRedisConnection()
 	if err != nil {
 		log.Fatal("Main NewRedisConnection Error: ", err)
@@ -34,7 +43,7 @@ func main() {
 	defer redis.Close()
 	redis_repo := repos.NewRedisRepository(redis)
 
-	//Коннектимся к НАТСу
+	//Подключаемся к NATS
 	natsConn, err := natsclient.ConnectToNATS()
 	if err != nil {
 		log.Fatal("Main NewNATSClient Error:", err)
@@ -42,6 +51,7 @@ func main() {
 	defer natsConn.Close()
 	natsClient := natsclient.NewNATSClient(natsConn)
 
+	//Коннектимся к кликхаус
 	clickhouse, err := connect.NewClickhouseConnection()
 	if err != nil {
 		log.Fatal("Main NewClickhouseConnection Error: ", err)
@@ -57,6 +67,7 @@ func main() {
 
 	err = migrate.UpClickhouse(context.Background(), clickhouse)
 
+	//Подписываемся на NATS
 	subj := os.Getenv("NATS_SUBJECT")
 	err = click_repo.Subscribe(subj)
 	if err != nil {
@@ -72,6 +83,4 @@ func main() {
 	if err != nil {
 		log.Fatal("Server dropped")
 	}
-
-	//defer cancel()
 }

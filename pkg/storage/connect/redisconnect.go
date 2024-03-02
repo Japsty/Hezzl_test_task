@@ -7,6 +7,7 @@ import (
 	"os"
 )
 
+// NewRedisConnection - функция создающая подключение к Redis
 func NewRedisConnection() (*redis.Client, error) {
 
 	redis_addr := os.Getenv("REDIS_SOURCE")

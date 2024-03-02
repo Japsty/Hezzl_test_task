@@ -10,6 +10,7 @@ import (
 	"log"
 )
 
+// ClickhouseRepository - обозначает все доступные к использованию методы взаимодействия с Clickhouse
 type ClickhouseRepository interface {
 	Subscribe(subject string) error
 }
@@ -19,6 +20,7 @@ type clickhouseRepository struct {
 	natsconn *nats.Conn
 }
 
+// NewClickhouseRepository создание нового экземляра репозитория ClickhouseRepository
 func NewClickhouseRepository(db *sql.DB, natsconn *nats.Conn) ClickhouseRepository {
 	return &clickhouseRepository{
 		db:       db,
@@ -26,6 +28,7 @@ func NewClickhouseRepository(db *sql.DB, natsconn *nats.Conn) ClickhouseReposito
 	}
 }
 
+// GoodToClickhouseLog функция перевода entities.Good в формат для хранения в Clickhouse
 func GoodToClickhouseLog(good entities.Good) storage.ClickhouseLog {
 	var clickhouseLog storage.ClickhouseLog
 
@@ -44,6 +47,7 @@ func GoodToClickhouseLog(good entities.Good) storage.ClickhouseLog {
 	return clickhouseLog
 }
 
+// insertNATSMessage метод для помещения сообщения из NATS в Clickhouse
 func (ch *clickhouseRepository) insertNATSMessage(msg *nats.Msg) error {
 	var payload storage.ClickhouseLog
 
@@ -88,6 +92,7 @@ func (ch *clickhouseRepository) insertNATSMessage(msg *nats.Msg) error {
 	return nil
 }
 
+// Subscribe метод подписки на сообщения от NATS и перекладывания информации из них в Clickhouse
 func (ch *clickhouseRepository) Subscribe(subject string) error {
 	_, err := ch.natsconn.Subscribe(subject, func(msg *nats.Msg) {
 		err := ch.insertNATSMessage(msg)

@@ -10,6 +10,7 @@ import (
 	"log"
 )
 
+// UpMigration - функция поднимающая миграции PostgreSQL
 func UpMigration(ctx context.Context, db *pgxpool.Pool) error {
 	sqlDb := stdlib.OpenDBFromPool(db)
 	provider, err := goose.NewProvider(database.DialectPostgres, sqlDb, migrations.Embed)

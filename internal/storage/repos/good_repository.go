@@ -28,11 +28,12 @@ type goodRepository struct {
 	db *pgxpool.Pool
 }
 
+// New - функция создания нового экземпляра репозитория Repository
 func New(db *pgxpool.Pool) Repository {
 	return &goodRepository{db: db}
 }
 
-// existionCheck - проверка наличия записи в базе данных по переданным goodId, projectId
+// ExistionCheck - метод проверки наличия записи в базе данных по переданным параметрам
 func (g *goodRepository) ExistionCheck(ctx context.Context, goodId, projectId int) (bool, error) {
 	var exists bool
 	err := g.db.QueryRow(ctx, querries.CheckRecord, goodId, projectId).Scan(&exists)
@@ -47,6 +48,7 @@ func (g *goodRepository) ExistionCheck(ctx context.Context, goodId, projectId in
 	return exists, nil
 }
 
+// GetGoodById - метод для получения записи в БД по параметрам
 func (g *goodRepository) GetGoodById(ctx context.Context, goodId, projectId int) (entities.Good, error) {
 	txOptions := pgx.TxOptions{
 		IsoLevel: pgx.Serializable,
@@ -84,8 +86,7 @@ func (g *goodRepository) GetGoodById(ctx context.Context, goodId, projectId int)
 	return good, nil
 }
 
-// CreateGood - метод создания записи в базе данных с переданными projectId и name,
-// возвращает созданную запись в виде entities.Good
+// CreateGood - метод создания записи в базе данных с переданными параметрами
 func (g *goodRepository) CreateGood(ctx context.Context, projectId int, name string, description string) (entities.Good, error) {
 	var maxPriority int
 	err := g.db.QueryRow(ctx, querries.SelectMaxPriority).Scan(&maxPriority)
@@ -157,6 +158,7 @@ func (g *goodRepository) UpdateGood(ctx context.Context, goodId int, projectId i
 	return good, nil
 }
 
+// RemoveGood - метод для удаления записи из БД
 func (g *goodRepository) RemoveGood(ctx context.Context, goodId, projectId int) (storage.RemoveGoodResponse, error) {
 
 	txOptions := pgx.TxOptions{
@@ -200,6 +202,7 @@ func (g *goodRepository) RemoveGood(ctx context.Context, goodId, projectId int) 
 	return removeGood, nil
 }
 
+// ListGoods - метод для пагинированного вывода записей по параметрам
 func (g *goodRepository) ListGoods(ctx context.Context, limit, offset int) (storage.ListGoodsResponse, error) {
 	rows, err := g.db.Query(ctx, querries.ListQuery, limit, offset)
 	if err != nil {
@@ -250,6 +253,8 @@ func (g *goodRepository) ListGoods(ctx context.Context, limit, offset int) (stor
 	return goodsResponse, nil
 }
 
+// ReprioritiizeGood - метод для обновления приоритета у конкретной записи и
+// у всех записей, что окажутся ниже по приоритету на +1
 func (g *goodRepository) ReprioritiizeGood(ctx context.Context, goodId, projectId, newPriority int) (storage.ReprioritiizeResponse, error) {
 
 	txOptions := pgx.TxOptions{

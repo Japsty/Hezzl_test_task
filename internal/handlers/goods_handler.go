@@ -21,14 +21,17 @@ type goodsHandler struct {
 }
 
 // Я понимаю, что данное решение совсем плохое, но я не смог понять каким образом
-// мне реализовать инвалидацию не имея доступа к полям лимит и оффсет при этом не
+// мне реализовать инвалидацию не имея доступа к полям limit и offset при этом не
 // совершая сохранение построчно, что накладно т.к. у нас будет огромное количество запросов
 // в реляционную бд
+//
+// Буду рад получить ответ в фидбеке на то, как вернее было бы реализовать
 type requestParams struct {
 	Limit  int
 	Offset int
 }
 
+// NewGoodsHandler функция для настройки эндпоинтов и создания экземпляра структуры goodsHandler
 func NewGoodsHandler(repo repos.Repository, redis repos.RedisRepository, natsConn *natsclient.NATSClient) *gin.Engine {
 
 	router := gin.Default()
@@ -50,6 +53,15 @@ func NewGoodsHandler(repo repos.Repository, redis repos.RedisRepository, natsCon
 	return router
 }
 
+// @Summary Add a new good
+// @Description Add a new good to the system
+// @Tags goods
+// @Accept json
+// @Produce json
+// @Param projectId query int true "Project ID"
+// @Param request body addGoodRequest true "Good details"
+// @Success 201 {object} YourGoodStruct
+// @Router /good/create [post]
 func (gh *goodsHandler) AddGood(c *gin.Context) {
 	var AddGoodRequest addGoodRequest
 
@@ -83,6 +95,16 @@ func (gh *goodsHandler) AddGood(c *gin.Context) {
 	c.JSON(http.StatusCreated, good)
 }
 
+// @Summary Update an existing good
+// @Description Update details of an existing good
+// @Tags goods
+// @Accept json
+// @Produce json
+// @Param id path int true "Good ID"
+// @Param projectId path int true "Project ID"
+// @Param request body updateGoodRequest true "Updated good details"
+// @Success 200 {object} YourGoodStruct
+// @Router /good/update [patch]
 func (gh *goodsHandler) PatchGoodUpdate(c *gin.Context) {
 	var patchGoodRequest updateGoodRequest
 
@@ -158,6 +180,15 @@ func (gh *goodsHandler) PatchGoodUpdate(c *gin.Context) {
 	}
 }
 
+// @Summary Delete a good
+// @Description Delete a good by ID
+// @Tags goods
+// @Accept json
+// @Produce json
+// @Param id path int true "Good ID"
+// @Param projectId path int true "Project ID"
+// @Success 200 {object} YourGoodStruct
+// @Router /good/remove [delete]
 func (gh *goodsHandler) DeleteGood(c *gin.Context) {
 	var ids idsRequest
 	if err := c.ShouldBindQuery(&ids); err != nil {
@@ -219,6 +250,15 @@ func (gh *goodsHandler) DeleteGood(c *gin.Context) {
 	}
 }
 
+// @Summary Get list of goods
+// @Description Get list of goods with optional parameters
+// @Tags goods
+// @Accept json
+// @Produce json
+// @Param limit query int false "Limit"
+// @Param offset query int false "Offset"
+// @Success 200 {array} YourGoodStruct
+// @Router /goods/list [get]
 func (gh *goodsHandler) GetGoods(c *gin.Context) {
 	var goodsRequestParams goodsRequest
 	if err := c.ShouldBindQuery(&goodsRequestParams); err != nil {
@@ -257,6 +297,16 @@ func (gh *goodsHandler) GetGoods(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
+// @Summary Reprioritize a good
+// @Description Change the priority of a good
+// @Tags goods
+// @Accept json
+// @Produce json
+// @Param id path int true "Good ID"
+// @Param projectId path int true "Project ID"
+// @Param request body patchGoodReprioritiizeRequest true "New priority details"
+// @Success 200 {object} YourGoodStruct
+// @Router /good/reprioritiize [patch]
 func (gh *goodsHandler) PatchGoodReprioritiize(c *gin.Context) {
 	var ids idsRequest
 	if err := c.ShouldBindQuery(&ids); err != nil {

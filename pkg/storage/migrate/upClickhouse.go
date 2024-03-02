@@ -9,6 +9,7 @@ import (
 	"log"
 )
 
+// UpClickhouse - функция поднимающая миграции Clickhouse
 func UpClickhouse(ctx context.Context, db *sql.DB) error {
 	provider, err := goose.NewProvider(database.DialectClickHouse, db, migrations_clickhouse.Embed)
 	if err != nil {

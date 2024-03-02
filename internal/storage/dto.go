@@ -5,12 +5,14 @@ import (
 	"time"
 )
 
+// RemoveGoodResponse - форматированный вывод метода RemoveGood
 type RemoveGoodResponse struct {
 	ID         int  `json:"id"`
 	CampaignID int  `json:"campaignId"`
 	Removed    bool `json:"removed"`
 }
 
+// Meta часть ответа метода ListGoods
 type Meta struct {
 	Total   int `json:"total"`
 	Removed int `json:"removed"`
@@ -18,16 +20,19 @@ type Meta struct {
 	Offset  int `json:"offset"`
 }
 
+// ListGoodsResponse - форматированный вывод метода ListGoods, содержит в себе структуру Meta
 type ListGoodsResponse struct {
 	Meta  Meta            `json:"meta"`
 	Goods []entities.Good `json:"goods"`
 }
 
+// PriorityObj составляющая структуры ReprioritiizeResponse
 type PriorityObj struct {
 	ID       int `json:"id"`
 	Priority int `json:"priority"`
 }
 
+// ReprioritiizeResponse - вывод метода ReprioritiizeGood
 type ReprioritiizeResponse struct {
 	Priorities []PriorityObj `json:"priorities"`
 }
