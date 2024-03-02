@@ -72,7 +72,7 @@ func (gh *goodsHandler) AddGood(c *gin.Context) {
 		return
 	}
 
-	good, err := gh.goodsRepository.CreateGood(c.Request.Context(), projectId, AddGoodRequest.Name)
+	good, err := gh.goodsRepository.CreateGood(c.Request.Context(), projectId, AddGoodRequest.Name, AddGoodRequest.Description)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Server database error"})
 		log.Println("AddGood CreateGood Error: ", err)
@@ -80,26 +80,20 @@ func (gh *goodsHandler) AddGood(c *gin.Context) {
 	}
 	log.Println("Good added successfully")
 
-	err = gh.natsConn.PublishMessage(os.Getenv("nats_subject"), good)
-	if err != nil {
-		log.Println("AddGood NATS PublishMessage Error: ", err)
-		return
-	}
-
 	c.JSON(http.StatusCreated, good)
 }
 
 func (gh *goodsHandler) PatchGoodUpdate(c *gin.Context) {
 	var patchGoodRequest updateGoodRequest
 
-	name := patchGoodRequest.Name
-	description := patchGoodRequest.Description
-
 	if err := c.BindJSON(&patchGoodRequest); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error: ": err})
 		log.Println("AddGood BindJSON Error: ", err)
 		return
 	}
+
+	name := patchGoodRequest.Name
+	description := patchGoodRequest.Description
 
 	var ids idsRequest
 	if err := c.ShouldBindQuery(&ids); err != nil {
@@ -147,19 +141,21 @@ func (gh *goodsHandler) PatchGoodUpdate(c *gin.Context) {
 
 	err = gh.redisRepository.InvalidateCache(c.Request.Context(), gh.requestParams.Limit, gh.requestParams.Offset)
 	if err != nil {
-		log.Println("PatchGoodUpdate CacheInvalidation Error")
+		log.Println("PatchGoodUpdate CacheInvalidation Error:", err)
 	}
-	log.Println("PatchGoodUpdate CacheInvalidation Error")
 
 	log.Println("Good updated successfully")
 
-	err = gh.natsConn.PublishMessage(os.Getenv("nats_subject"), good)
+	c.JSON(http.StatusOK, good)
+
+	clickhouseLog := repos.GoodToClickhouseLog(good)
+
+	log.Println("NATS Subject:", os.Getenv("NATS_SUBJECT"))
+	err = gh.natsConn.PublishMessage(os.Getenv("NATS_SUBJECT"), clickhouseLog)
 	if err != nil {
 		log.Println("PatchGoodUpdate NATS PublishMessage Error: ", err)
 		return
 	}
-
-	c.JSON(http.StatusOK, good)
 }
 
 func (gh *goodsHandler) DeleteGood(c *gin.Context) {
@@ -204,19 +200,23 @@ func (gh *goodsHandler) DeleteGood(c *gin.Context) {
 
 	err = gh.redisRepository.InvalidateCache(c.Request.Context(), gh.requestParams.Limit, gh.requestParams.Offset)
 	if err != nil {
-		log.Println("DeleteGood CacheInvalidation Error")
+		log.Println("DeleteGood CacheInvalidation Error:", err)
 	}
-	log.Println("DeleteGood CacheInvalidation Error")
-
 	log.Println("Good removed successfully")
 
-	err = gh.natsConn.PublishMessage(os.Getenv("nats_subject"), response)
+	c.JSON(http.StatusOK, response)
+
+	good, err := gh.goodsRepository.GetGoodById(c.Request.Context(), id, projectId)
+	if err != nil {
+		log.Println("DeleteGood GetGoodById Error: ", err)
+	}
+	clickhouseLog := repos.GoodToClickhouseLog(good)
+
+	err = gh.natsConn.PublishMessage(os.Getenv("NATS_SUBJECT"), clickhouseLog)
 	if err != nil {
 		log.Println("DeleteGood NATS PublishMessage Error: ", err)
 		return
 	}
-
-	c.JSON(http.StatusOK, response)
 }
 
 func (gh *goodsHandler) GetGoods(c *gin.Context) {
@@ -253,14 +253,6 @@ func (gh *goodsHandler) GetGoods(c *gin.Context) {
 		}
 	}
 	log.Println("Goods listed successfully")
-
-	for _, good := range response.Goods {
-		err = gh.natsConn.PublishMessage(os.Getenv("nats_subject"), good)
-		if err != nil {
-			log.Println("GetGoods NATS PublishMessage Error: ", err)
-			return
-		}
-	}
 
 	c.JSON(http.StatusOK, response)
 }
@@ -314,9 +306,21 @@ func (gh *goodsHandler) PatchGoodReprioritiize(c *gin.Context) {
 
 	err = gh.redisRepository.InvalidateCache(c.Request.Context(), gh.requestParams.Limit, gh.requestParams.Offset)
 	if err != nil {
-		log.Println("PatchGoodReprioritiize CacheInvalidation Error")
+		log.Println("PatchGoodReprioritiize CacheInvalidation Error: ", err)
 	}
-	log.Println("PatchGoodReprioritiize CacheInvalidated")
 
 	c.JSON(http.StatusOK, response)
+
+	good, err := gh.goodsRepository.GetGoodById(c.Request.Context(), id, projectId)
+	if err != nil {
+		log.Println("PatchGoodReprioritiize GetGoodById Error: ", err)
+	}
+	clickhouseLog := repos.GoodToClickhouseLog(good)
+
+	log.Println("NATS Subject:", os.Getenv("NATS_SUBJECT"))
+	err = gh.natsConn.PublishMessage(os.Getenv("NATS_SUBJECT"), clickhouseLog)
+	if err != nil {
+		log.Println("PatchGoodReprioritiize NATS PublishMessage Error: ", err)
+		return
+	}
 }

@@ -1,10 +1,12 @@
 package natsclient
 
 import (
+	"Hezzl_test_task/internal/storage"
 	"encoding/json"
 	"github.com/nats-io/nats.go"
 	"log"
 	"os"
+	"time"
 )
 
 type NATSClient struct {
@@ -24,20 +26,15 @@ func NewNATSClient(nc *nats.Conn) *NATSClient {
 	return &NATSClient{Conn: nc}
 }
 
-func (natsClient *NATSClient) PublishMessage(subject string, payload interface{}) error {
-	natsUrl := os.Getenv("NATS_URL")
-	nc, err := nats.Connect(natsUrl)
-	if err != nil {
-		return err
-	}
-	defer nc.Close()
-
+func (natsClient *NATSClient) PublishMessage(subject string, payload storage.ClickhouseLog) error {
+	payload.EventTime = time.Now()
+	payload.EventTime.Format("2006-01-02 15:04:05")
 	jsonData, err := json.Marshal(payload)
 	if err != nil {
 		return err
 	}
 
-	err = nc.Publish(subject, jsonData)
+	err = natsClient.Conn.Publish(subject, jsonData)
 	if err != nil {
 		return err
 	}

@@ -78,7 +78,13 @@ const (
 
 	InsetIntoClickhouse = ` 
 		INSERT INTO clickhouse 
-		(id, project_id, name, description, priority, removed, created_at) 
+		(id, project_id, name, description, priority, removed, event_time) 
 		VALUES (?, ?, ?, ?, ?, ?, ?)
+		`
+
+	SelectByIdAndPrjct = ` 
+		SELECT id, project_id, name, description, priority, removed, created_at
+		FROM goods
+		WHERE id = $1 AND project_id = $2;
 		`
 )

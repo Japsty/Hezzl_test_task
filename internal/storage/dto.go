@@ -1,6 +1,9 @@
 package storage
 
-import "Hezzl_test_task/internal/entities"
+import (
+	"Hezzl_test_task/internal/entities"
+	"time"
+)
 
 type RemoveGoodResponse struct {
 	ID         int  `json:"id"`
@@ -30,11 +33,11 @@ type ReprioritiizeResponse struct {
 }
 
 type ClickhouseLog struct {
-	ID          int    `db:"id"`
-	ProjectID   int    `db:"project_id"`
-	Name        string `db:"name"`
-	Description string `db:"description"`
-	Priority    int    `db:"priority"`
-	Removed     bool   `db:"removed"`
-	CreatedAt   string `db:"created_at"`
+	ID          int       `db:"id"`
+	ProjectID   int       `db:"project_id"`
+	Name        string    `db:"name"`
+	Description string    `db:"description"`
+	Priority    int       `db:"priority"`
+	Removed     uint8     `json:"removed"`
+	EventTime   time.Time `db:"created_at"`
 }

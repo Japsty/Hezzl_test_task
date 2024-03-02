@@ -1,18 +1,15 @@
 -- +goose Up
 CREATE TABLE IF NOT EXISTS clickhouse
 (
-    id         INT ,
-    project_id INT ,
-    name       VARCHAR(255),
+    id          INT,
+    project_id  INT,
+    name        VARCHAR(255),
     description VARCHAR(255),
-    priority INT,
-    removed BOOLEAN,
-    created_at TIMESTAMP
-);
-
-CREATE INDEX id_and_project_id_index ON clickhouse USING btree (id, project_id);
-CREATE INDEX name_index ON clickhouse USING hash (name);
-
+    priority    INT,
+    removed     UInt8,
+    event_time  TIMESTAMP
+) ENGINE = MergeTree()
+ORDER BY (id, project_id, name);
 
 -- +goose Down
 DROP TABLE IF EXISTS clickhouse;

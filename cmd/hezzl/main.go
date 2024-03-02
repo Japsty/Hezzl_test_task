@@ -34,13 +34,6 @@ func main() {
 	defer redis.Close()
 	redis_repo := repos.NewRedisRepository(redis)
 
-	clickhouse, err := connect.NewClickhouseConnection()
-	if err != nil {
-		log.Fatal("Main NewClickhouseConnection Error: ", err)
-	}
-	defer clickhouse.Close()
-	click_repo := repos.NewClickhouseRepository(clickhouse)
-
 	//Коннектимся к НАТСу
 	natsConn, err := natsclient.ConnectToNATS()
 	if err != nil {
@@ -48,6 +41,13 @@ func main() {
 	}
 	defer natsConn.Close()
 	natsClient := natsclient.NewNATSClient(natsConn)
+
+	clickhouse, err := connect.NewClickhouseConnection()
+	if err != nil {
+		log.Fatal("Main NewClickhouseConnection Error: ", err)
+	}
+	defer clickhouse.Close()
+	click_repo := repos.NewClickhouseRepository(clickhouse, natsConn)
 
 	//Поднимаем миграции
 	err = migrate.UpMigration(context.Background(), db)
@@ -58,12 +58,12 @@ func main() {
 	err = migrate.UpClickhouse(context.Background(), clickhouse)
 
 	subj := os.Getenv("NATS_SUBJECT")
-	err = repos.ClickhouseRepository.Subscribe(click_repo, subj)
+	err = click_repo.Subscribe(subj)
 	if err != nil {
 		log.Fatal("Main ClickhouseRepository Subscribe Error: ", err)
 		return
 	}
-
+	//
 	router := handlers.NewGoodsHandler(repo, redis_repo, natsClient)
 
 	// err = router.Run("localhost:8080") - если на локальной машине
@@ -72,4 +72,6 @@ func main() {
 	if err != nil {
 		log.Fatal("Server dropped")
 	}
+
+	//defer cancel()
 }

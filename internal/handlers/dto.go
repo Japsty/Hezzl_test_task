@@ -1,7 +1,8 @@
 package handlers
 
 type addGoodRequest struct {
-	Name string `json:"name" validate:"required,min=3,max=255"`
+	Name        string `json:"name" validate:"required,min=3,max=255"`
+	Description string `json:"description" validate:"omitempty,min=3,max=255"`
 }
 
 type updateGoodRequest struct {

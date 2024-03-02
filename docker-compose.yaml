@@ -25,8 +25,8 @@ services:
     image: clickhouse/clickhouse-server:latest
     restart: always
     ports:
-      - "18123:8123"
-      - "19000:9000"
+      - "8123:8123"
+      - "9000:9000"
     networks:
       - service_network
 

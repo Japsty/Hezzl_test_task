@@ -4,13 +4,17 @@ import (
 	"context"
 	"fmt"
 	"github.com/redis/go-redis/v9"
+	"os"
 )
 
 func NewRedisConnection() (*redis.Client, error) {
 
+	redis_addr := os.Getenv("REDIS_SOURCE")
+	redis_password := os.Getenv("REDIS_PASSWORD")
+
 	client := redis.NewClient(&redis.Options{
-		Addr:     "redis:6379",
-		Password: "",
+		Addr:     redis_addr,
+		Password: redis_password,
 		DB:       0,
 	})
 

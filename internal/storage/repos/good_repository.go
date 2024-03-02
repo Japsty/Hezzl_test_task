@@ -16,7 +16,8 @@ import (
 // Repository - основной интерфейс, содержит все доступные методы для работы с PostgreSql базой данных
 type Repository interface {
 	ExistionCheck(ctx context.Context, goodId, projectId int) (bool, error)
-	CreateGood(ctx context.Context, projectId int, name string) (entities.Good, error)
+	GetGoodById(ctx context.Context, goodId, projectId int) (entities.Good, error)
+	CreateGood(ctx context.Context, projectId int, name string, description string) (entities.Good, error)
 	UpdateGood(ctx context.Context, goodId int, projectId int, name string, description string) (entities.Good, error)
 	RemoveGood(ctx context.Context, goodId, projectId int) (storage.RemoveGoodResponse, error)
 	ListGoods(ctx context.Context, limit, offset int) (storage.ListGoodsResponse, error)
@@ -46,9 +47,46 @@ func (g *goodRepository) ExistionCheck(ctx context.Context, goodId, projectId in
 	return exists, nil
 }
 
+func (g *goodRepository) GetGoodById(ctx context.Context, goodId, projectId int) (entities.Good, error) {
+	txOptions := pgx.TxOptions{
+		IsoLevel: pgx.Serializable,
+	}
+	tx, err := g.db.BeginTx(ctx, txOptions)
+	log.Printf("GetGoodById Transaction Begined")
+	if err != nil {
+		log.Printf("GetGoodById BeginTx Error: %v", err)
+		defer func() {
+			errRollback := tx.Rollback(ctx)
+			if errRollback != nil {
+				log.Printf("GetGoodById Rollback Transaction Error: %v in BeginTx Error: %v", errRollback, err)
+			}
+		}()
+		return entities.Good{}, err
+	}
+
+	var good entities.Good
+	err = g.db.QueryRow(ctx, querries.SelectByIdAndPrjct,
+		goodId,
+		projectId,
+	).Scan(
+		&good.ID, &good.ProjectID, &good.Name, &good.Description, &good.Priority, &good.Removed, &good.CreatedAt,
+	)
+	if err != nil {
+		log.Printf("GetGoodById QueryRow Error: %v", err)
+		return entities.Good{}, err
+	}
+
+	if err = tx.Commit(ctx); err != nil {
+		log.Printf("GetGoodById Commit Error: %v", err)
+		return entities.Good{}, err
+	}
+
+	return good, nil
+}
+
 // CreateGood - метод создания записи в базе данных с переданными projectId и name,
 // возвращает созданную запись в виде entities.Good
-func (g *goodRepository) CreateGood(ctx context.Context, projectId int, name string) (entities.Good, error) {
+func (g *goodRepository) CreateGood(ctx context.Context, projectId int, name string, description string) (entities.Good, error) {
 	var maxPriority int
 	err := g.db.QueryRow(ctx, querries.SelectMaxPriority).Scan(&maxPriority)
 	if err != nil {
@@ -61,7 +99,7 @@ func (g *goodRepository) CreateGood(ctx context.Context, projectId int, name str
 	err = g.db.QueryRow(ctx, querries.CreateQuery,
 		projectId,
 		name,
-		"",
+		description,
 		newPriority,
 		false,
 		time.Now(),
