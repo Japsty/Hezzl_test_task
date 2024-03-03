@@ -2,6 +2,7 @@
 # REST сервис на Go,PostgreSQL,Redis,NATS,Clickhouse
 
 ##### Автор: [Виноградов Данил](https://t.me/japsty) 
+##### Ссылка на задание [тут](https://clck.ru/394pUY)
 
 ## Содержание
 1. [Запуск](#запуск)
