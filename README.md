@@ -17,7 +17,6 @@
 ```
 #### Чистый запуск
 ```shell
-  docker rm $(docker ps -a -q) && docker volume prune -f
   docker rmi -f hezzl_test_task-service
   docker-compose up
 ```
