@@ -1,16 +1,69 @@
 definitions:
+  internal_storage.ListResponse:
+    properties:
+      Meta:
+        $ref: '#/definitions/internal_storage.Meta'
+      Goods:
+        type: array
+        items:
+          $ref: '#/definitions/internal_entities.Good'
+    type: object
+  internal_storage.Meta:
+    properties:
+      Total:
+        type: integer
+      Removed:
+        type: integer
+      Limit:
+        type: integer
+      Offset:
+        type: integer
+    type: object
+  internal_storage.priorityObject:
+    properties:
+      ID:
+        type: integer
+      Priority:
+        type: integer
+    type: object
+  internal_storage.patchRepriotiriizeResponse:
+    properties:
+      priorities:
+        type: array
+        items:
+          $ref: '#/definitions/internal_storage.priorityObject'
+    type: object
+
+  notFoundResponse:
+    properties:
+      code:
+        type: integer
+      message:
+        type: string
+      details:
+        type: string
+    type: object
+  internal_storage.removeGoodResponse:
+    properties:
+      ID:
+        type: integer
+      CdmpaingID:
+        type: integer
+      Removed:
+        type: boolean
+    type: object
   internal_handlers.addGoodRequest:
     properties:
-      description:
-        maxLength: 255
-        minLength: 3
-        type: string
       name:
         maxLength: 255
         minLength: 3
         type: string
+      description:
+        maxLength: 255
+        minLength: 3
+        type: string
     required:
-    - name
+      - name
     type: object
   internal_handlers.patchGoodReprioritiizeRequest:
     properties:
@@ -18,19 +71,43 @@ definitions:
         minimum: 0
         type: integer
     required:
-    - newPriority
+      - newPriority
     type: object
   internal_handlers.updateGoodRequest:
     properties:
-      description:
-        type: string
       name:
         maxLength: 255
         minLength: 3
         type: string
+      description:
+        type: string
     required:
-    - name
+      - name
     type: object
+  internal_entities.Good:
+    properties:
+      ID:
+        type: integer
+      ProjectID:
+        type: integer
+        minimum: 0
+      Name:
+        maxLength: 255
+        minLength: 3
+        type: string
+      Description:
+        type: string
+      Priority:
+        type: integer
+      Removed:
+        type: boolean
+      CreatedAt:
+        type: number
+    required:
+      - ProjectID
+      - Name
+    type: object
+
 info:
   contact:
     email: danil-vinogradov-92@mail.ru
@@ -43,27 +120,27 @@ paths:
   /good/create:
     post:
       consumes:
-      - application/json
+        - application/json
       description: Add a new good to the database
       parameters:
-      - description: Project ID
-        in: query
-        name: projectId
-        required: true
-        type: integer
-      - description: Good details
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/internal_handlers.addGoodRequest'
+        - description: Project ID
+          in: query
+          name: projectId
+          required: true
+          type: integer
+        - description: Good details
+          in: body
+          name: request
+          required: true
+          schema:
+            $ref: '#/definitions/internal_handlers.addGoodRequest'
       produces:
-      - application/json
+        - application/json
       responses:
         "201":
           description: ok
           schema:
-            type: string
+            $ref: '#/definitions/internal_entities.Good'
         "400":
           description: bad input
           schema:
@@ -74,30 +151,30 @@ paths:
             type: string
       summary: Add a new good
       tags:
-      - good
+        - good
   /good/remove:
     delete:
       consumes:
-      - application/json
+        - application/json
       description: Delete a good by ID
       parameters:
-      - description: Good ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      - description: Project ID
-        in: path
-        name: projectId
-        required: true
-        type: integer
+        - description: Good ID
+          in: query
+          name: id
+          required: true
+          type: integer
+        - description: Project ID
+          in: query
+          name: projectId
+          required: true
+          type: integer
       produces:
-      - application/json
+        - application/json
       responses:
         "200":
           description: ok
           schema:
-            type: string
+            $ref: '#/definitions/internal_storage.removeGoodResponse'
         "400":
           description: bad input
           schema:
@@ -105,43 +182,43 @@ paths:
         "404":
           description: not found
           schema:
-            type: string
+            $ref: '#/definitions/notFoundResponse'
         "500":
           description: Internal Server Error
           schema:
             type: string
       summary: Delete a good
       tags:
-      - good
+        - good
   /good/reprioritiize:
     patch:
       consumes:
-      - application/json
+        - application/json
       description: Change the priority of a good
       parameters:
-      - description: Good ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      - description: Project ID
-        in: path
-        name: projectId
-        required: true
-        type: integer
-      - description: New priority details
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/internal_handlers.patchGoodReprioritiizeRequest'
+        - description: Good ID
+          in: query
+          name: id
+          required: true
+          type: integer
+        - description: Project ID
+          in: query
+          name: projectId
+          required: true
+          type: integer
+        - description: New priority details
+          in: body
+          name: request
+          required: true
+          schema:
+            $ref: '#/definitions/internal_handlers.patchGoodReprioritiizeRequest'
       produces:
-      - application/json
+        - application/json
       responses:
         "200":
           description: ok
           schema:
-            type: string
+            $ref: '#/definitions/internal_storage.patchRepriotiriizeResponse'
         "400":
           description: bad input
           schema:
@@ -149,43 +226,43 @@ paths:
         "404":
           description: not found
           schema:
-            type: string
+            $ref: '#/definitions/notFoundResponse'
         "500":
           description: Internal Server Error
           schema:
             type: string
       summary: Reprioritize a good
       tags:
-      - goods
+        - good
   /good/update:
     patch:
       consumes:
-      - application/json
+        - application/json
       description: Update details of an existing good
       parameters:
-      - description: ID
-        in: path
-        name: id
-        required: true
-        type: integer
-      - description: ProjectID
-        in: path
-        name: projectId
-        required: true
-        type: integer
-      - description: Updated good details
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/internal_handlers.updateGoodRequest'
+        - description: ID
+          in: query
+          name: id
+          required: true
+          type: integer
+        - description: ProjectID
+          in: query
+          name: projectId
+          required: true
+          type: integer
+        - description: Updated good details
+          in: body
+          name: request
+          required: true
+          schema:
+            $ref: '#/definitions/internal_handlers.updateGoodRequest'
       produces:
-      - application/json
+        - application/json
       responses:
         "200":
           description: ok
           schema:
-            type: string
+            $ref: '#/definitions/internal_entities.Good'
         "400":
           description: bad input
           schema:
@@ -193,35 +270,35 @@ paths:
         "404":
           description: not found
           schema:
-            type: string
+            $ref: '#/definitions/notFoundResponse'
         "500":
           description: Internal Server Error
           schema:
             type: string
       summary: Update an existing good
       tags:
-      - good
+        - good
   /goods/list:
     get:
       consumes:
-      - application/json
+        - application/json
       description: Get list of goods with pagination parameters
       parameters:
-      - description: Limit
-        in: query
-        name: limit
-        type: integer
-      - description: Offset
-        in: query
-        name: offset
-        type: integer
+        - description: Limit
+          in: query
+          name: limit
+          type: integer
+        - description: Offset
+          in: query
+          name: offset
+          type: integer
       produces:
-      - application/json
+        - application/json
       responses:
         "200":
           description: ok
           schema:
-            type: string
+            $ref: '#/definitions/internal_storage.ListResponse'
         "400":
           description: bad input
           schema:
@@ -232,5 +309,5 @@ paths:
             type: string
       summary: Get list of goods
       tags:
-      - good
+        - good
 swagger: "2.0"

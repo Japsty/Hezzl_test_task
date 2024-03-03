@@ -81,7 +81,7 @@ func (gh *goodsHandler) AddGood(c *gin.Context) {
 		return
 	}
 
-	projectId, err := strconv.Atoi(c.Query(""))
+	projectId, err := strconv.Atoi(c.Query("projectId"))
 	if err != nil || projectId <= 0 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "bad input"})
 		log.Println("Invalid 'projectId' parameter: ", projectId)
