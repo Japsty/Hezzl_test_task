@@ -11,13 +11,8 @@
 4. [Про реализацию Redis](#про-реализацию-redis)
 
 ### Запуск
-#### Обычный запуск
+
 ```shell
-  docker-compose up
-```
-#### Чистый запуск
-```shell
-  docker rmi -f hezzl_test_task-service
   docker-compose up
 ```
 
